@@ -36,9 +36,9 @@ class WineRecommender:
         self.cosine_sim = cosine_similarity(self.tfidf_matrix)
         print("✅ Recommender initialized successfully.\n")
 
-    # ----------------------------------------------------------------------
-    # 1️⃣ Wine-to-Wine Recommendation (by title)
-    # ----------------------------------------------------------------------
+   
+    # Wine-to-Wine Recommendation (by title)
+
     def recommend(self, title: str, n: int = 5):
         if self.wine_df.empty:
             return [{"message": "Dataset not loaded."}]
@@ -67,9 +67,8 @@ class WineRecommender:
         clean_recs = recs[cols].fillna("").replace({float("nan"): None})
         return clean_recs.to_dict(orient="records")
 
-    # ----------------------------------------------------------------------
-    # 2️⃣ Taste-Quiz Preference Recommendation
-    # ----------------------------------------------------------------------
+    # Taste-Quiz Preference Recommendation
+
     def recommend_by_preferences(self, prefs: dict, n: int = 5):
         if self.wine_df.empty:
             return [{"message": "Dataset not loaded."}]

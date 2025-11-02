@@ -3,9 +3,7 @@ from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 from recommender.recommender import WineRecommender
 
-# ----------------------------------------------------------------------
-# 🌐 FastAPI app setup
-# ----------------------------------------------------------------------
+#FastAPI app setup
 app = FastAPI(
     title="Wine AI Recommender API",
     description="Backend for the Wine Sommelier Agent — supports both title-based and taste-quiz recommendations.",
@@ -21,15 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ----------------------------------------------------------------------
-# 🍷 Initialize recommender
-# ----------------------------------------------------------------------
+#Initialize recommender
 recommender = WineRecommender("data/wine_data.csv")
 
 
-# ----------------------------------------------------------------------
-# 1️⃣ Recommend by wine title (TF-IDF)
-# ----------------------------------------------------------------------
+# Recommend by wine title (TF-IDF)
 @app.get("/recommend/title")
 def recommend_by_title(title: str, n: int = 5):
     """
@@ -41,9 +35,7 @@ def recommend_by_title(title: str, n: int = 5):
     return {"input": title, "recommendations": results}
 
 
-# ----------------------------------------------------------------------
-# 2️⃣ Recommend by user taste preferences (quiz-style)
-# ----------------------------------------------------------------------
+# Recommend by user taste preferences (quiz-style)
 @app.post("/recommend/preferences")
 def recommend_by_preferences(prefs: dict = Body(...)):
     """
@@ -62,9 +54,7 @@ def recommend_by_preferences(prefs: dict = Body(...)):
     return {"input_preferences": prefs, "recommendations": results}
 
 
-# ----------------------------------------------------------------------
-# 🏠 Health Check
-# ----------------------------------------------------------------------
+#Health Check
 @app.get("/")
 def root():
     return {
