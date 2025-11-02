@@ -1,35 +1,28 @@
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.so
-*.egg-info/
-*.egg
-build/
-dist/
+*.pyc
 
-# Virtual environment
+# --- Virtual Environment ---
 venv/
 .env
+.env.*
 
-# IDE / Editor
-.vscode/
-.idea/
+# --- Data Files ---
+data/
+*.csv
+*.xlsx
+*.json
 
-# OS junk
-.DS_Store
-Thumbs.db
-
-# Notebooks / checkpoints
-.ipynb_checkpoints/
-
-# Logs
+# --- ADK / Cache / Logs ---
+adk_logs/
+adk_cache/
 *.log
+*.db
 
-# Cache
-.cache/
-__pycache__/
-
-# ADK / model data
-.adk/
+# --- System Files ---
+.DS_Store
+.idea/
+.vscode/
