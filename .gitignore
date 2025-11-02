@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+
+# Virtual environment
+venv/
+.env
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Notebooks / checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Cache
+.cache/
+__pycache__/
+
+# ADK / model data
+.adk/
