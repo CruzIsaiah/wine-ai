@@ -4,6 +4,7 @@ import math
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+
 class WineRecommender:
     def __init__(self, csv_path):
         print(f"📂 Loading wine data from: {csv_path}")
@@ -14,7 +15,7 @@ class WineRecommender:
         # Combine descriptive fields for TF-IDF
         self.wine_df["combined_text"] = (
             self.wine_df["Description"].fillna('') + ' ' +
-            self.wine_df["Grape"].fillna('') + ' ' +
+            3 * self.wine_df["Grape"].fillna('') + ' ' +
             self.wine_df["Style"].fillna('') + ' ' +
             self.wine_df["Characteristics"].fillna('') + ' ' +
             self.wine_df["Region"].fillna('') + ' ' +
@@ -61,3 +62,4 @@ class WineRecommender:
         except Exception as e:
             print(f"⚠️ ERROR in recommender: {e}")
             return [{"error": str(e)}]
+
