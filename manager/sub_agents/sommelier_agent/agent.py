@@ -1,4 +1,5 @@
 from google.adk.agents import Agent
+from google.adk.tools.agent_tool import AgentTool
 import requests
 
 # -----------------------------
@@ -37,9 +38,9 @@ def send_to_recommender(preferences: dict):
 
 
 # -----------------------------
-# Root Agent Definition
+# Sommelier Agent Definition
 # -----------------------------
-root_agent = Agent(
+sommelier_agent = Agent(
     name="sommelier_agent",
     model="gemini-2.0-flash",
     description=(
@@ -60,7 +61,7 @@ root_agent = Agent(
         '  \"sweetness\": \"sweet\",\n'
         '  \"body\": \"light\",\n'
         '  \"flavor_notes\": \"fruity\",\n'
-        '  \"region\": \"California\"\n'
+        '  \"regiosommelier_agentn\": \"California\"\n'
         "}\n\n"
         "Then **call the Python function** `send_to_recommender(preferences)` "
         "to send that JSON to http://127.0.0.1:8000/recommend/preferences "
@@ -69,4 +70,4 @@ root_agent = Agent(
         "Never generate your own recommendations."
     )
 )
-root_agent.tools = [send_to_recommender]
+sommelier_agent.tools = [send_to_recommender]
