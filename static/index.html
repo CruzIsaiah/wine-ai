@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=5" defer></script>
+  <script src="/static/app.js?v=6" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -149,7 +149,26 @@
       <div><p class="eyebrow"><span></span> Your cellar</p><h2 id="wine-list-title">My Wine List</h2></div>
       <button id="close-wine-list" type="button" aria-label="Close wine list">×</button>
     </div>
-    <div id="saved-wines" class="saved-wines"></div>
+    <div class="cellar-tabs" role="tablist">
+      <button class="cellar-tab active" type="button" data-cellar-tab="saved">Want to try <span id="saved-count">0</span></button>
+      <button class="cellar-tab" type="button" data-cellar-tab="tried">Tasting journal <span id="tried-count">0</span></button>
+    </div>
+    <div class="cellar-panel active" data-cellar-panel="saved">
+      <div id="saved-wines" class="saved-wines"></div>
+    </div>
+    <div class="cellar-panel" data-cellar-panel="tried">
+      <form id="tasting-form" class="tasting-form">
+        <input type="hidden" name="source_title">
+        <label><span>Wine</span><input name="wine_name" required maxlength="200" placeholder="Wine name"></label>
+        <div class="tasting-row">
+          <label><span>Your rating</span><select name="rating" required><option value="">Choose</option><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></label>
+          <label><span>Date tried</span><input name="date_tried" type="date" required></label>
+        </div>
+        <label><span>Tasting notes</span><textarea name="notes" maxlength="500" placeholder="What stood out? Fruit, sweetness, finish, food pairing…"></textarea></label>
+        <button class="button button-gold" type="submit">Save tasting note</button>
+      </form>
+      <div id="tried-wines" class="tried-wines"></div>
+    </div>
     <p class="list-footnote">Saved privately in this browser.</p>
   </aside>
 
