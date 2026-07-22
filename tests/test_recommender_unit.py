@@ -38,6 +38,22 @@ def test_country_aliases_are_normalized(recommender):
     assert all(result["Country"] == "USA" for result in results)
 
 
+def test_preferences_enforce_usd_price_range(recommender):
+    results = recommender.recommend_by_preferences(
+        {
+            "type": "white",
+            "sweetness": "slightly sweet",
+            "min_price": 15,
+            "max_price": 20,
+            "currency": "USD",
+        }
+    )
+
+    assert results
+    prices = [recommender._parse_price(result["Price"]) for result in results]
+    assert all(11.85 <= price <= 15.8 for price in prices)
+
+
 def test_title_recommendations_exclude_selected_wine(recommender):
     results = recommender.recommend_by_title("The Guv'nor")
 

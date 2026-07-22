@@ -48,6 +48,34 @@ def test_empty_preferences_are_rejected():
     assert response.status_code == 400
 
 
+def test_preferences_endpoint_enforces_price_range():
+    response = client.post(
+        "/recommend/preferences",
+        json={
+            "type": "white",
+            "sweetness": "slightly sweet",
+            "min_price": 15,
+            "max_price": 20,
+            "currency": "USD",
+        },
+    )
+
+    assert response.status_code == 200
+    recommendations = response.json()["recommendations"]
+    assert recommendations
+    prices = [float(wine["Price"].split("£")[1].split()[0]) for wine in recommendations]
+    assert all(11.85 <= price <= 15.8 for price in prices)
+
+
+def test_invalid_price_range_is_rejected():
+    response = client.post(
+        "/recommend/preferences",
+        json={"type": "white", "min_price": 20, "max_price": 15, "currency": "USD"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_title_endpoint_returns_similar_wines():
     response = client.post("/recommend/title", json={"title": "The Guv'nor"})
 

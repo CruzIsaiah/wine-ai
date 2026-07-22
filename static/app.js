@@ -87,7 +87,10 @@ async function requestRecommendations(path, payload) {
 
 document.querySelector("#preferences-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  requestRecommendations("/recommend/preferences", Object.fromEntries(new FormData(event.currentTarget)));
+  const preferences = Object.fromEntries(new FormData(event.currentTarget));
+  preferences.min_price = preferences.min_price ? Number(preferences.min_price) : null;
+  preferences.max_price = preferences.max_price ? Number(preferences.max_price) : null;
+  requestRecommendations("/recommend/preferences", preferences);
 });
 
 document.querySelector("#title-form").addEventListener("submit", (event) => {

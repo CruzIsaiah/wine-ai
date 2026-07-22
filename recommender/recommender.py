@@ -1,13 +1,17 @@
 import pandas as pd
 import numpy as np
+import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 class WineRecommender:
+    CURRENCY_TO_GBP = {"GBP": 1.0, "USD": 0.79, "EUR": 0.86}
+
     def __init__(self, csv_path):
         print(f"📂 Loading wine data from: {csv_path}")
         self.wine_df = pd.read_csv(csv_path)
+        self.wine_df["price_gbp"] = self.wine_df["Price"].apply(self._parse_price)
 
         # Weighted descriptive fields
         self.wine_df["combined_text"] = (
@@ -24,6 +28,11 @@ class WineRecommender:
         self.vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
         self.tfidf_matrix = self.vectorizer.fit_transform(self.wine_df["combined_text"])
         print("✅ TF-IDF matrix built successfully.\n")
+
+    @staticmethod
+    def _parse_price(value):
+        match = re.search(r"(?:£|\$|€)?\s*(\d+(?:\.\d{1,2})?)", str(value))
+        return float(match.group(1)) if match else np.nan
 
     def _serialize_results(self, indices, similarity_scores):
         columns = ["Title", "Grape", "Country", "Region", "Style", "Price"]
@@ -50,7 +59,9 @@ class WineRecommender:
             prefs.get("flavor_notes", ""),
             prefs.get("region", "")
         ]).lower()
-        if not query_text.strip():
+        min_price = prefs.get("min_price")
+        max_price = prefs.get("max_price")
+        if not query_text.strip() and min_price is None and max_price is None:
             raise ValueError("At least one wine preference is required.")
 
         query_vec = self.vectorizer.transform([query_text])
@@ -80,6 +91,13 @@ class WineRecommender:
                 self.wine_df["Region"].fillna("").str.contains(region, case=False, regex=False)
                 | self.wine_df["Country"].fillna("").str.contains(region, case=False, regex=False)
             )
+
+        currency = str(prefs.get("currency") or "GBP").upper()
+        conversion = self.CURRENCY_TO_GBP.get(currency, 1.0)
+        if min_price is not None:
+            candidate_mask &= self.wine_df["price_gbp"] >= float(min_price) * conversion
+        if max_price is not None:
+            candidate_mask &= self.wine_df["price_gbp"] <= float(max_price) * conversion
 
         candidate_indices = self.wine_df.index[candidate_mask].to_numpy()
         if not len(candidate_indices):

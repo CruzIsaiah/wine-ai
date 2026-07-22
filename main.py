@@ -25,11 +25,22 @@ class WinePreferences(BaseModel):
     body: str = Field(default="", max_length=50)
     flavor_notes: str = Field(default="", max_length=200)
     region: str = Field(default="", max_length=100)
+    min_price: float | None = Field(default=None, ge=0, le=10000)
+    max_price: float | None = Field(default=None, ge=0, le=10000)
+    currency: str = Field(default="GBP", pattern="^(GBP|USD|EUR)$")
 
     @field_validator("type", "sweetness", "body", "flavor_notes", "region")
     @classmethod
     def normalize_text(cls, value: str) -> str:
         return value.strip()
+
+    @field_validator("max_price")
+    @classmethod
+    def validate_price_range(cls, value: float | None, info):
+        minimum = info.data.get("min_price")
+        if value is not None and minimum is not None and value < minimum:
+            raise ValueError("max_price must be greater than or equal to min_price")
+        return value
 
 
 class WineTitleRequest(BaseModel):
