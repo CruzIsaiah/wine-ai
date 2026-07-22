@@ -1,4 +1,6 @@
+import asyncio
 import os
+import uuid
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -6,12 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from google.adk.agents import Agent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
 from rate_limit import InMemoryRateLimiter
 from recommender.recommender import WineRecommender
 from external_wine_search import find_external_wine
+from manager.sub_agents.sommelier_agent.agent import send_to_recommender
 
 
 load_dotenv()
@@ -58,6 +65,16 @@ class RecommendationResponse(BaseModel):
     reference_wine: dict[str, Any] | None = None
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=1000)
+    session_id: str | None = Field(default=None, max_length=100)
+
+
+class ChatResponse(BaseModel):
+    message: str
+    session_id: str
+
+
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
 base_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(base_dir, "static")
@@ -99,7 +116,42 @@ async def enforce_rate_limit(request, call_next):
     return response
 
 recommender = WineRecommender(os.path.join(base_dir, "data", "wine_data.csv"))
+chat_session_service = InMemorySessionService()
+website_chat_agent = Agent(
+    name="website_sommelier",
+    model="gemini-3.6-flash",
+    description="Conversational interface for the WinePair recommendation engine.",
+    instruction=(
+        "You are WinePair's friendly website sommelier. For every recommendation request, "
+        "call send_to_recommender before answering. Pass structured type, sweetness, body, "
+        "flavor_notes, region, min_price, max_price, and currency when provided. For a named "
+        "wine, pass {'wine_name': 'Name'}; the backend handles catalog and grounded-search lookup. "
+        "Use only wines returned by the tool. Never invent or substitute wines, prices, regions, "
+        "or tasting notes. Preserve stated budgets exactly and keep responses concise."
+    ),
+    tools=[send_to_recommender],
+)
+chat_runner = Runner(
+    agent=website_chat_agent,
+    app_name="winepair_web",
+    session_service=chat_session_service,
+)
+chat_session_ids: set[str] = set()
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+def run_chat_agent(session_id: str, new_message: types.Content) -> str:
+    final_text = ""
+    for event in chat_runner.run(
+        user_id="website_user",
+        session_id=session_id,
+        new_message=new_message,
+    ):
+        if event.is_final_response() and event.content:
+            final_text = "\n".join(
+                part.text for part in event.content.parts or [] if part.text
+            )
+    return final_text
 
 
 @app.get("/")
@@ -110,6 +162,33 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "ok", "wines_loaded": len(recommender.wine_df)}
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    session_id = request.session_id or str(uuid.uuid4())
+    if session_id not in chat_session_ids:
+        await chat_session_service.create_session(
+            app_name="winepair_web",
+            user_id="website_user",
+            session_id=session_id,
+        )
+        chat_session_ids.add(session_id)
+
+    new_message = types.Content(
+        role="user",
+        parts=[types.Part(text=request.message.strip())],
+    )
+    try:
+        final_text = await asyncio.to_thread(run_chat_agent, session_id, new_message)
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail="The sommelier is temporarily unavailable.",
+        ) from error
+    if not final_text:
+        raise HTTPException(status_code=502, detail="The sommelier returned no response.")
+    return ChatResponse(message=final_text, session_id=session_id)
 
 
 @app.post("/recommend/preferences", response_model=RecommendationResponse)

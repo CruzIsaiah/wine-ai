@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=2" defer></script>
+  <script src="/static/app.js?v=3" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -74,7 +74,7 @@
       <div class="finder-shell">
         <div class="finder-tabs" role="tablist">
           <button class="tab active" data-tab="preferences" role="tab" aria-selected="true">Build my taste profile</button>
-          <button class="tab" data-tab="title" role="tab" aria-selected="false">Find wines like one I love</button>
+          <button class="tab" data-tab="chat" role="tab" aria-selected="false">Chat with the sommelier</button>
         </div>
 
         <form id="preferences-form" class="finder-form active" data-panel="preferences">
@@ -101,11 +101,21 @@
           <button class="button button-gold submit-button" type="submit"><span>Find my wines</span><span class="button-arrow">→</span></button>
         </form>
 
-        <form id="title-form" class="finder-form title-form" data-panel="title">
-          <label><span>A wine you already love</span><input name="title" required minlength="2" placeholder="Try “The Guv'nor” or “Oyster Bay”"></label>
-          <p>We’ll analyze its grape, style, region, and tasting profile to find similar bottles.</p>
-          <button class="button button-gold submit-button" type="submit"><span>Find similar wines</span><span class="button-arrow">→</span></button>
-        </form>
+        <div id="chat-panel" class="finder-form chat-panel" data-panel="chat">
+          <div id="chat-messages" class="chat-messages" aria-live="polite">
+            <div class="chat-message assistant"><span class="chat-avatar">W</span><p>Welcome to WinePair. Tell me what you enjoy, name a wine you love, or share your budget.</p></div>
+          </div>
+          <div class="chat-suggestions">
+            <button type="button">A slightly sweet white under $20</button>
+            <button type="button">Bold Spanish reds for dinner</button>
+            <button type="button">Wines like Josh Cabernet</button>
+          </div>
+          <form id="chat-form" class="chat-input-row">
+            <label class="sr-only" for="chat-input">Message the sommelier</label>
+            <input id="chat-input" name="message" required maxlength="1000" placeholder="Ask your sommelier anything…" autocomplete="off">
+            <button type="submit" aria-label="Send message">→</button>
+          </form>
+        </div>
       </div>
     </section>
 

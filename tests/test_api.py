@@ -14,6 +14,22 @@ def test_health_endpoint():
     assert response.json()["wines_loaded"] > 0
 
 
+def test_chat_endpoint_returns_session_and_response(monkeypatch):
+    class FinalEvent:
+        content = type("Content", (), {"parts": [type("Part", (), {"text": "Try a Rioja."})()]})()
+
+        @staticmethod
+        def is_final_response():
+            return True
+
+    monkeypatch.setattr("main.chat_runner.run", lambda **kwargs: iter([FinalEvent()]))
+    response = client.post("/chat", json={"message": "Recommend a red wine"})
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Try a Rioja."
+    assert response.json()["session_id"]
+
+
 def test_api_responses_include_rate_limit_headers():
     response = client.get("/")
 

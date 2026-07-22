@@ -3,6 +3,7 @@ const panels = document.querySelectorAll(".finder-form");
 const resultsSection = document.querySelector("#results");
 const resultsGrid = document.querySelector("#results-grid");
 const status = document.querySelector("#status");
+let chatSessionId = null;
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -94,9 +95,57 @@ document.querySelector("#preferences-form").addEventListener("submit", (event) =
   requestRecommendations("/recommend/preferences", preferences);
 });
 
-document.querySelector("#title-form").addEventListener("submit", (event) => {
+function addChatMessage(text, role) {
+  const messages = document.querySelector("#chat-messages");
+  const message = document.createElement("div");
+  message.className = `chat-message ${role}`;
+  const formattedText = escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
+  message.innerHTML = role === "assistant"
+    ? `<span class="chat-avatar">W</span><p>${formattedText}</p>`
+    : `<p>${formattedText}</p>`;
+  messages.appendChild(message);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendChatMessage(message) {
+  const trimmed = message.trim();
+  if (!trimmed) return;
+  addChatMessage(trimmed, "user");
+  const messages = document.querySelector("#chat-messages");
+  const typing = document.createElement("div");
+  typing.className = "chat-typing";
+  typing.textContent = "Searching the cellar…";
+  messages.appendChild(typing);
+  messages.scrollTop = messages.scrollHeight;
+  try {
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: trimmed, session_id: chatSessionId }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.detail || "The sommelier is unavailable.");
+    chatSessionId = body.session_id;
+    typing.remove();
+    addChatMessage(body.message, "assistant");
+  } catch (error) {
+    typing.remove();
+    addChatMessage(error.message, "assistant");
+  }
+}
+
+document.querySelector("#chat-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  requestRecommendations("/recommend/title", Object.fromEntries(new FormData(event.currentTarget)));
+  const input = document.querySelector("#chat-input");
+  const message = input.value;
+  input.value = "";
+  sendChatMessage(message);
+});
+
+document.querySelectorAll(".chat-suggestions button").forEach((button) => {
+  button.addEventListener("click", () => sendChatMessage(button.textContent));
 });
 
 document.querySelector("#start-over").addEventListener("click", () => {

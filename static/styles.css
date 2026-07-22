@@ -83,6 +83,20 @@ input:focus, select:focus { border-color: var(--wine); }
 .button-arrow { border-left: 1px solid rgba(255,255,255,.25); padding-left: 20px; }
 .title-form { max-width: 650px; margin: auto; text-align: center; padding-top: 60px; padding-bottom: 60px; }
 .title-form p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.chat-panel { padding: 0; }
+.chat-messages { height: 390px; overflow-y: auto; padding: 35px 38px 18px; background: #fbf7f0; }
+.chat-message { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.chat-message p { max-width: 72%; margin: 0; padding: 13px 16px; border-radius: 2px 14px 14px 14px; background: white; color: #514746; font-size: 13px; line-height: 1.65; white-space: pre-wrap; box-shadow: 0 5px 18px rgba(61,33,27,.07); }
+.chat-message.user { justify-content: flex-end; }
+.chat-message.user p { background: var(--wine); color: white; border-radius: 14px 2px 14px 14px; }
+.chat-avatar { flex: 0 0 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--wine); color: white; font: italic 13px "Playfair Display",serif; }
+.chat-typing { color: var(--muted); font-size: 12px; padding-left: 40px; }
+.chat-suggestions { display: flex; gap: 8px; padding: 14px 38px 6px; overflow-x: auto; }
+.chat-suggestions button { white-space: nowrap; border: 1px solid var(--line); border-radius: 99px; background: white; color: var(--wine); padding: 8px 12px; cursor: pointer; font-size: 11px; }
+.chat-input-row { display: flex; align-items: center; gap: 12px; padding: 12px 38px 24px; }
+.chat-input-row input { flex: 1; }
+.chat-input-row button { width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--wine); color: white; cursor: pointer; font-size: 18px; }
 
 .results-section { padding: 100px clamp(24px, 7vw, 110px); background: var(--paper); }
 .results-heading { display: flex; align-items: end; justify-content: space-between; max-width: 1250px; margin: auto 42px; }
@@ -127,6 +141,7 @@ footer { background: var(--wine-deep); color: rgba(255,255,255,.6); padding: 42p
   h1 { font-size: 58px; }.hero-actions { align-items: flex-start; flex-direction: column; }.trust-row { gap: 22px; }.hero-visual { min-height: 440px; }
   .finder-section, .results-section, .how-section { padding: 75px 20px; }.finder-tabs { grid-template-columns: 1fr; }.finder-form { padding: 30px 20px; }
   .choice-row { grid-template-columns: repeat(2,1fr); }.form-grid { grid-template-columns: 1fr; }.results-heading { align-items: flex-start; gap: 20px; flex-direction: column; }
+  .chat-messages { padding: 25px 18px; }.chat-message p { max-width: 86%; }.chat-suggestions, .chat-input-row { padding-left: 18px; padding-right: 18px; }
   .results-grid { grid-template-columns: 1fr; }.wine-card { min-height: 330px; }.steps { grid-template-columns: 1fr; }.step-icon { margin: 25px 0 10px; }
   footer { align-items: flex-start; flex-direction: column; gap: 12px; }.footer-brand { margin-bottom: 12px; }
 }
