@@ -18,6 +18,8 @@ def test_api_responses_include_rate_limit_headers():
     response = client.get("/")
 
     assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "WinePair" in response.text
     assert response.headers["X-RateLimit-Limit"] == "60"
     assert int(response.headers["X-RateLimit-Remaining"]) >= 0
 

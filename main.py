@@ -3,6 +3,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
@@ -39,6 +41,8 @@ class RecommendationResponse(BaseModel):
 
 
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
+base_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(base_dir, "static")
 requests_per_minute = int(os.getenv("API_RATE_LIMIT_PER_MINUTE", "60"))
 rate_limiter = InMemoryRateLimiter(limit=requests_per_minute)
 
@@ -76,12 +80,13 @@ async def enforce_rate_limit(request, call_next):
     response.headers["X-RateLimit-Remaining"] = str(remaining)
     return response
 
-recommender = WineRecommender("data/wine_data.csv")
+recommender = WineRecommender(os.path.join(base_dir, "data", "wine_data.csv"))
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 @app.get("/")
 def home():
-    return {"message": "Wine recommender backend running 🍷"}
+    return FileResponse(os.path.join(static_dir, "index.html"))
 
 
 @app.get("/health")

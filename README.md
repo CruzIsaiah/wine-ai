@@ -14,6 +14,7 @@ WinePair AI is a grounded virtual sommelier powered by Google ADK and Gemini 3.6
 - 🤖 **Conversational manager** built with Google ADK and Gemini
 - ⚡ **FastAPI backend** for serving recommendations and agent responses
 - 🌐 **ADK Web** interface for local chat and testing
+- 🎨 **Presentation website** with guided taste discovery and polished recommendation cards
 - 🔎 **Grounded Google Search** fallback for unknown wines
 - ✅ **13 automated tests** covering ranking, API behavior, and tool handoffs
 
@@ -53,6 +54,8 @@ API_RATE_LIMIT_PER_MINUTE=60
 ```bash
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
+
+Open `http://127.0.0.1:8000` to use the presentation-ready website. The frontend is served by FastAPI and calls the recommendation endpoints directly.
 
 ### 5️⃣ Start ADK Web
 
