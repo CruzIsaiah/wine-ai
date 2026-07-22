@@ -15,19 +15,62 @@ def test_health_endpoint():
 
 
 def test_chat_endpoint_returns_session_and_response(monkeypatch):
+    wine = {"Title": "Test Rioja", "Price": "£12.99 per bottle"}
+
+    class ToolEvent:
+        content = type(
+            "Content",
+            (),
+            {
+                "parts": [
+                    type(
+                        "Part",
+                        (),
+                        {
+                            "text": None,
+                            "function_response": type(
+                                "FunctionResponse",
+                                (),
+                                {"response": {"recommendations": [wine]}},
+                            )(),
+                        },
+                    )()
+                ]
+            },
+        )()
+
+        @staticmethod
+        def is_final_response():
+            return False
+
     class FinalEvent:
-        content = type("Content", (), {"parts": [type("Part", (), {"text": "Try a Rioja."})()]})()
+        content = type(
+            "Content",
+            (),
+            {
+                "parts": [
+                    type(
+                        "Part",
+                        (),
+                        {"text": "Try a Rioja.", "function_response": None},
+                    )()
+                ]
+            },
+        )()
 
         @staticmethod
         def is_final_response():
             return True
 
-    monkeypatch.setattr("main.chat_runner.run", lambda **kwargs: iter([FinalEvent()]))
+    monkeypatch.setattr(
+        "main.chat_runner.run", lambda **kwargs: iter([ToolEvent(), FinalEvent()])
+    )
     response = client.post("/chat", json={"message": "Recommend a red wine"})
 
     assert response.status_code == 200
     assert response.json()["message"] == "Try a Rioja."
     assert response.json()["session_id"]
+    assert response.json()["recommendations"] == [wine]
 
 
 def test_api_responses_include_rate_limit_headers():

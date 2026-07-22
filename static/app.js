@@ -6,6 +6,7 @@ const status = document.querySelector("#status");
 let chatSessionId = null;
 let currentWines = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
+const chatWineResults = new Map();
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -133,7 +134,7 @@ document.querySelector("#preferences-form").addEventListener("submit", (event) =
   requestRecommendations("/recommend/preferences", preferences);
 });
 
-function addChatMessage(text, role) {
+function addChatMessage(text, role, wines = []) {
   const messages = document.querySelector("#chat-messages");
   const message = document.createElement("div");
   message.className = `chat-message ${role}`;
@@ -143,6 +144,17 @@ function addChatMessage(text, role) {
   message.innerHTML = role === "assistant"
     ? `<span class="chat-avatar">W</span><p>${formattedText}</p>`
     : `<p>${formattedText}</p>`;
+  if (role === "assistant" && wines.length) {
+    const options = document.createElement("div");
+    options.className = "chat-wine-options";
+    options.innerHTML = wines.map((wine) => {
+      const wineId = `${Date.now()}-${Math.random()}`;
+      chatWineResults.set(wineId, wine);
+      const isSaved = savedWines.some((saved) => saved.Title === wine.Title);
+      return `<div class="chat-wine-option"><strong>${escapeHtml(wine.Title)}</strong><span>${escapeHtml(wine.Price || "Price varies")}</span><button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button></div>`;
+    }).join("");
+    message.appendChild(options);
+  }
   messages.appendChild(message);
   messages.scrollTop = messages.scrollHeight;
 }
@@ -167,7 +179,7 @@ async function sendChatMessage(message) {
     if (!response.ok) throw new Error(body.detail || "The sommelier is unavailable.");
     chatSessionId = body.session_id;
     typing.remove();
-    addChatMessage(body.message, "assistant");
+    addChatMessage(body.message, "assistant", body.recommendations || []);
   } catch (error) {
     typing.remove();
     addChatMessage(error.message, "assistant");
@@ -184,6 +196,19 @@ document.querySelector("#chat-form").addEventListener("submit", (event) => {
 
 document.querySelectorAll(".chat-suggestions button").forEach((button) => {
   button.addEventListener("click", () => sendChatMessage(button.textContent));
+});
+
+document.querySelector("#chat-messages").addEventListener("click", (event) => {
+  const button = event.target.closest(".chat-save-wine");
+  if (!button) return;
+  const wine = chatWineResults.get(button.dataset.chatWineId);
+  if (!wine) return;
+  const existingIndex = savedWines.findIndex((saved) => saved.Title === wine.Title);
+  if (existingIndex >= 0) savedWines.splice(existingIndex, 1);
+  else savedWines.push(wine);
+  saveWineList();
+  button.classList.toggle("saved", existingIndex < 0);
+  button.textContent = existingIndex < 0 ? "✓ Saved" : "+ Save";
 });
 
 document.querySelector("#start-over").addEventListener("click", () => {

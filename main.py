@@ -73,6 +73,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     message: str
     session_id: str
+    recommendations: list[dict[str, Any]] = Field(default_factory=list)
 
 
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
@@ -140,18 +141,29 @@ chat_session_ids: set[str] = set()
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-def run_chat_agent(session_id: str, new_message: types.Content) -> str:
+def run_chat_agent(
+    session_id: str, new_message: types.Content
+) -> tuple[str, list[dict[str, Any]]]:
     final_text = ""
+    recommendations: list[dict[str, Any]] = []
     for event in chat_runner.run(
         user_id="website_user",
         session_id=session_id,
         new_message=new_message,
     ):
+        for part in event.content.parts if event.content else []:
+            if not part.function_response or not part.function_response.response:
+                continue
+            tool_response = part.function_response.response
+            if isinstance(tool_response.get("result"), dict):
+                tool_response = tool_response["result"]
+            if isinstance(tool_response.get("recommendations"), list):
+                recommendations = tool_response["recommendations"]
         if event.is_final_response() and event.content:
             final_text = "\n".join(
                 part.text for part in event.content.parts or [] if part.text
             )
-    return final_text
+    return final_text, recommendations
 
 
 @app.get("/")
@@ -180,7 +192,9 @@ async def chat(request: ChatRequest):
         parts=[types.Part(text=request.message.strip())],
     )
     try:
-        final_text = await asyncio.to_thread(run_chat_agent, session_id, new_message)
+        final_text, recommendations = await asyncio.to_thread(
+            run_chat_agent, session_id, new_message
+        )
     except Exception as error:
         raise HTTPException(
             status_code=502,
@@ -188,7 +202,11 @@ async def chat(request: ChatRequest):
         ) from error
     if not final_text:
         raise HTTPException(status_code=502, detail="The sommelier returned no response.")
-    return ChatResponse(message=final_text, session_id=session_id)
+    return ChatResponse(
+        message=final_text,
+        session_id=session_id,
+        recommendations=recommendations,
+    )
 
 
 @app.post("/recommend/preferences", response_model=RecommendationResponse)
