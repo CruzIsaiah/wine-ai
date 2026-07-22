@@ -43,7 +43,10 @@ class WineRecommender:
         return float(match.group(1)) if match else np.nan
 
     def _serialize_results(self, indices, similarity_scores, currency="GBP"):
-        columns = ["Title", "Grape", "Country", "Region", "Style", "Price"]
+        columns = [
+            "Title", "Grape", "Country", "Region", "Style", "Price",
+            "Type", "Characteristics", "Description", "ABV", "Vintage",
+        ]
         results = self.wine_df.loc[indices, columns].copy()
         results["similarity_score"] = [
             round(float(similarity_scores[index]), 3) for index in indices

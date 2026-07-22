@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=7" defer></script>
+  <script src="/static/app.js?v=8" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -172,6 +172,26 @@
       <div id="tried-wines" class="tried-wines"></div>
     </div>
     <p class="list-footnote">Saved privately in this browser.</p>
+  </aside>
+
+  <div id="wine-detail-backdrop" class="list-backdrop" hidden></div>
+  <aside id="wine-detail-panel" class="wine-detail-panel" aria-labelledby="wine-detail-title" aria-hidden="true">
+    <div class="detail-header">
+      <div><p class="eyebrow"><span></span> Ask your sommelier</p><h2 id="wine-detail-title">Wine details</h2><p id="wine-detail-meta"></p></div>
+      <button id="close-wine-details" type="button" aria-label="Close wine details">×</button>
+    </div>
+    <div id="detail-conversation" class="detail-conversation"></div>
+    <div class="detail-suggestions">
+      <button type="button">What does it taste like?</button>
+      <button type="button">What food pairs well?</button>
+      <button type="button">How should I serve it?</button>
+      <button type="button">Tell me about the grape</button>
+    </div>
+    <form id="wine-detail-form" class="detail-input-row">
+      <label class="sr-only" for="wine-detail-question">Ask about this wine</label>
+      <input id="wine-detail-question" required maxlength="500" placeholder="Ask a question about this wine…">
+      <button type="submit" aria-label="Ask question">→</button>
+    </form>
   </aside>
 
   <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">W</span><span>WinePair</span></a><p>Thoughtful recommendations. Better bottles.</p><p class="tech-note">Google ADK · Gemini · FastAPI · scikit-learn</p></footer>

@@ -73,6 +73,23 @@ def test_chat_endpoint_returns_session_and_response(monkeypatch):
     assert response.json()["recommendations"] == [wine]
 
 
+def test_wine_details_endpoint_returns_grounded_answer(monkeypatch):
+    monkeypatch.setattr(
+        "main.answer_wine_question",
+        lambda wine, question: f"{wine['Title']} pairs well with grilled food.",
+    )
+    response = client.post(
+        "/wine-details",
+        json={
+            "wine": {"Title": "The Guv'nor", "Grape": "Tempranillo"},
+            "question": "What food works well?",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "The Guv'nor" in response.json()["answer"]
+
+
 def test_api_responses_include_rate_limit_headers():
     response = client.get("/")
 

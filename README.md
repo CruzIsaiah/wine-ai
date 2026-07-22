@@ -25,6 +25,8 @@ WinePair AI is a personalized wine discovery and tasting-journal application pow
 - Grounded Google Search fallback when a named wine is outside the catalog
 - Persistent chat sessions during the active website visit
 - Structured recommendation cards that can be saved directly from chat
+- In-depth follow-up questions for every suggested wine, grounded in catalog metadata
+- Sommelier explanations for flavor, grapes, food pairing, serving, and wine style
 
 ### Personal Wine List
 

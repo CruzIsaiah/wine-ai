@@ -97,7 +97,8 @@ input:focus, select:focus { border-color: var(--wine); }
 .chat-wine-option { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px; padding: 11px 13px; background: white; border: 1px solid var(--line); }
 .chat-wine-option strong { color: var(--wine-dark); font: 14px "Playfair Display",serif; }
 .chat-wine-option span { color: var(--muted); font-size: 10px; }
-.chat-save-wine { grid-column: 2; grid-row: 1/3; border: 1px solid rgba(111,23,41,.25); background: transparent; color: var(--wine); padding: 7px 9px; cursor: pointer; font-size: 10px; }
+.chat-wine-actions { grid-column:2; grid-row:1/3; display:grid; gap:5px; align-self:center; }
+.chat-save-wine,.chat-ask-wine { border: 1px solid rgba(111,23,41,.25); background: transparent; color: var(--wine); padding: 7px 9px; cursor: pointer; font-size: 10px; }
 .chat-save-wine.saved { background: var(--wine); color: white; }
 .chat-avatar { flex: 0 0 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--wine); color: white; font: italic 13px "Playfair Display",serif; }
 .chat-typing { color: var(--muted); font-size: 12px; padding-left: 40px; }
@@ -128,6 +129,7 @@ input:focus, select:focus { border-color: var(--wine); }
 .score { color: var(--wine); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .save-wine { margin-top: 14px; width: 100%; border: 1px solid rgba(111,23,41,.24); background: transparent; color: var(--wine); padding: 9px 10px; cursor: pointer; font-size: 11px; transition: background .2s, color .2s; }
 .save-wine:hover, .save-wine.saved { background: var(--wine); color: white; }
+.ask-wine { width:100%; margin-top:12px; border:0; background:transparent; color:var(--wine); cursor:pointer; font-size:11px; text-decoration:underline; }
 .empty-state { grid-column: 1/-1; padding: 40px; text-align: center; background: var(--cream); color: var(--muted); }
 .loading { width: 28px; height: 28px; border: 2px solid #d8cec4; border-top-color: var(--wine); border-radius: 50%; animation: spin .8s linear infinite; margin: 25px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -179,6 +181,13 @@ footer { background: var(--wine-deep); color: rgba(255,255,255,.6); padding: 42p
 .delete-tasting { position: absolute; top: 17px; right: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; }
 .empty-list { padding: 70px 20px; text-align: center; color: var(--muted); line-height: 1.7; }
 .list-footnote { margin: 0; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: 10px; }
+.wine-detail-panel { position:fixed; z-index:55; top:0; right:0; width:min(520px,100%); height:100vh; background:var(--paper); box-shadow:-20px 0 60px rgba(35,13,15,.22); transform:translateX(105%); transition:transform .3s ease; display:flex; flex-direction:column; }
+.wine-detail-panel.open { transform:translateX(0); }
+.detail-header { padding:32px 30px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:flex-start; }
+.detail-header h2 { color:var(--wine-dark); font-size:32px; line-height:1.1; }.detail-header > button { border:0; background:transparent; color:var(--wine); font-size:30px; cursor:pointer; }.detail-header > div > p:last-child { color:var(--muted); font-size:11px; margin-bottom:0; }
+.detail-conversation { flex:1; overflow-y:auto; padding:24px 30px; background:#fbf7f0; }.detail-message { margin-bottom:14px; display:flex; }.detail-message p { margin:0; max-width:85%; padding:12px 14px; background:white; color:#514746; border-radius:2px 12px 12px 12px; font-size:12px; line-height:1.65; white-space:pre-wrap; }.detail-message.user { justify-content:flex-end; }.detail-message.user p { background:var(--wine); color:white; border-radius:12px 2px 12px 12px; }.detail-thinking { color:var(--muted); font-size:11px; }
+.detail-suggestions { display:flex; gap:7px; overflow-x:auto; padding:12px 30px 4px; }.detail-suggestions button { white-space:nowrap; border:1px solid var(--line); border-radius:99px; background:white; color:var(--wine); padding:7px 10px; cursor:pointer; font-size:10px; }
+.detail-input-row { display:flex; gap:10px; align-items:center; padding:10px 30px 25px; }.detail-input-row input { flex:1; }.detail-input-row button { width:40px; height:40px; border:0; border-radius:50%; background:var(--wine); color:white; cursor:pointer; font-size:17px; }
 
 @media (max-width: 980px) {
   .hero { grid-template-columns: 1fr; }.hero-visual { min-height: 520px; }.hero-copy { padding-top: 150px; }.bottle { height: 85%; }

@@ -19,6 +19,7 @@ from rate_limit import InMemoryRateLimiter
 from recommender.recommender import WineRecommender
 from external_wine_search import find_external_wine
 from manager.sub_agents.sommelier_agent.agent import send_to_recommender
+from wine_details import answer_wine_question
 
 
 load_dotenv()
@@ -74,6 +75,15 @@ class ChatResponse(BaseModel):
     message: str
     session_id: str
     recommendations: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class WineDetailsRequest(BaseModel):
+    wine: dict[str, Any]
+    question: str = Field(min_length=2, max_length=500)
+
+
+class WineDetailsResponse(BaseModel):
+    answer: str
 
 
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
@@ -212,6 +222,22 @@ async def chat(request: ChatRequest):
         session_id=session_id,
         recommendations=recommendations,
     )
+
+
+@app.post("/wine-details", response_model=WineDetailsResponse)
+async def wine_details(request: WineDetailsRequest):
+    if not request.wine.get("Title"):
+        raise HTTPException(status_code=422, detail="Wine title is required.")
+    try:
+        answer = await asyncio.to_thread(
+            answer_wine_question, request.wine, request.question.strip()
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail="The sommelier could not answer that question right now.",
+        ) from error
+    return WineDetailsResponse(answer=answer)
 
 
 @app.post("/recommend/preferences", response_model=RecommendationResponse)

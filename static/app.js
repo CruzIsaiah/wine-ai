@@ -8,6 +8,7 @@ let currentWines = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
 let triedWines = JSON.parse(localStorage.getItem("winepair_tried_wines") || "[]");
 const chatWineResults = new Map();
+let detailsWine = null;
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -64,6 +65,7 @@ function renderWines(wines, body) {
         <span class="price">${escapeHtml(wine.Price || "Price varies")}</span>
         <span class="score">${scoreLabel(wine.similarity_score, bestScore)}</span>
       </div>
+      <button class="ask-wine" data-wine-index="${index}">Ask about this wine</button>
       <button class="save-wine ${savedWines.some((saved) => saved.Title === wine.Title) ? "saved" : ""}" data-wine-index="${index}">${savedWines.some((saved) => saved.Title === wine.Title) ? "✓ Saved to my list" : "+ Add to my list"}</button>
     </article>
   `).join("");
@@ -195,7 +197,7 @@ function addChatMessage(text, role, wines = []) {
       const wineId = `${Date.now()}-${Math.random()}`;
       chatWineResults.set(wineId, wine);
       const isSaved = savedWines.some((saved) => saved.Title === wine.Title);
-      return `<div class="chat-wine-option"><strong>${escapeHtml(wine.Title)}</strong><span>${escapeHtml(wine.Price || "Price varies")}</span><button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button></div>`;
+      return `<div class="chat-wine-option"><strong>${escapeHtml(wine.Title)}</strong><span>${escapeHtml(wine.Price || "Price varies")}</span><div class="chat-wine-actions"><button class="chat-ask-wine" data-chat-wine-id="${wineId}">Ask</button><button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button></div></div>`;
     }).join("");
     message.appendChild(options);
   }
@@ -243,6 +245,12 @@ document.querySelectorAll(".chat-suggestions button").forEach((button) => {
 });
 
 document.querySelector("#chat-messages").addEventListener("click", (event) => {
+  const askButton = event.target.closest(".chat-ask-wine");
+  if (askButton) {
+    const wine = chatWineResults.get(askButton.dataset.chatWineId);
+    if (wine) openWineDetails(wine);
+    return;
+  }
   const button = event.target.closest(".chat-save-wine");
   if (!button) return;
   const wine = chatWineResults.get(button.dataset.chatWineId);
@@ -260,6 +268,12 @@ document.querySelector("#start-over").addEventListener("click", () => {
 });
 
 document.querySelector("#results-grid").addEventListener("click", (event) => {
+  const askButton = event.target.closest(".ask-wine");
+  if (askButton) {
+    const wine = currentWines[Number(askButton.dataset.wineIndex)];
+    if (wine) openWineDetails(wine);
+    return;
+  }
   const button = event.target.closest(".save-wine");
   if (!button) return;
   const wine = currentWines[Number(button.dataset.wineIndex)];
@@ -323,7 +337,67 @@ document.querySelector("#tried-wines").addEventListener("click", (event) => {
 document.querySelector("#open-wine-list").addEventListener("click", openWineList);
 document.querySelector("#close-wine-list").addEventListener("click", closeWineList);
 document.querySelector("#list-backdrop").addEventListener("click", closeWineList);
-document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeWineList(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeWineList(); closeWineDetails(); } });
+
+function openWineDetails(wine) {
+  detailsWine = wine;
+  document.querySelector("#wine-detail-title").textContent = wine.Title;
+  document.querySelector("#wine-detail-meta").textContent = [wine.Grape, wine.Style, wine.Region || wine.Country].filter(Boolean).join(" · ");
+  document.querySelector("#detail-conversation").innerHTML = '<div class="detail-message"><p>What would you like to know about this wine? I can explain its flavor, grape, pairing, serving style, or catalog details.</p></div>';
+  document.querySelector("#wine-detail-panel").classList.add("open");
+  document.querySelector("#wine-detail-panel").setAttribute("aria-hidden", "false");
+  document.querySelector("#wine-detail-backdrop").hidden = false;
+}
+
+function closeWineDetails() {
+  document.querySelector("#wine-detail-panel").classList.remove("open");
+  document.querySelector("#wine-detail-panel").setAttribute("aria-hidden", "true");
+  document.querySelector("#wine-detail-backdrop").hidden = true;
+}
+
+function addDetailMessage(text, role="assistant") {
+  const conversation = document.querySelector("#detail-conversation");
+  const message = document.createElement("div");
+  message.className = `detail-message ${role}`;
+  message.innerHTML = `<p>${escapeHtml(text).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")}</p>`;
+  conversation.appendChild(message);
+  conversation.scrollTop = conversation.scrollHeight;
+}
+
+async function askWineQuestion(question) {
+  if (!detailsWine || !question.trim()) return;
+  addDetailMessage(question.trim(), "user");
+  const conversation = document.querySelector("#detail-conversation");
+  const thinking = document.createElement("div");
+  thinking.className = "detail-thinking";
+  thinking.textContent = "Sommelier is thinking…";
+  conversation.appendChild(thinking);
+  try {
+    const response = await fetch("/wine-details", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({wine:detailsWine,question:question.trim()}),
+    });
+    const body = await response.json();
+    thinking.remove();
+    if (!response.ok) throw new Error(body.detail || "I couldn't answer that right now.");
+    addDetailMessage(body.answer);
+  } catch (error) {
+    thinking.remove();
+    addDetailMessage(error.message);
+  }
+}
+
+document.querySelector("#wine-detail-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#wine-detail-question");
+  const question = input.value;
+  input.value = "";
+  askWineQuestion(question);
+});
+document.querySelectorAll(".detail-suggestions button").forEach((button) => button.addEventListener("click", () => askWineQuestion(button.textContent)));
+document.querySelector("#close-wine-details").addEventListener("click", closeWineDetails);
+document.querySelector("#wine-detail-backdrop").addEventListener("click", closeWineDetails);
 
 saveWineList();
 document.querySelector("#tasting-form").elements.date_tried.value = new Date().toISOString().slice(0, 10);
