@@ -9,6 +9,13 @@ let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]"
 const chatWineResults = new Map();
 let detailsWine = null;
 
+function updateHeaderAppearance() {
+  document.querySelector(".site-header").classList.toggle("scrolled", window.scrollY > 24);
+}
+
+window.addEventListener("scroll", updateHeaderAppearance, { passive: true });
+updateHeaderAppearance();
+
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     tabs.forEach((item) => {
