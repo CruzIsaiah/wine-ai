@@ -17,12 +17,34 @@ window.addEventListener("scroll", updateHeaderAppearance, { passive: true });
 updateHeaderAppearance();
 
 const chatPanel = document.querySelector("#chat-panel");
-chatPanel.addEventListener("focusin", () => document.querySelector(".site-header").classList.add("interaction-hidden"));
+const siteHeader = document.querySelector(".site-header");
+let chatIsActive = false;
+let headerHideTimer;
+
+function revealHeaderDuringChat() {
+  if (!chatIsActive) return;
+  siteHeader.classList.remove("interaction-hidden");
+  window.clearTimeout(headerHideTimer);
+  headerHideTimer = window.setTimeout(() => {
+    if (chatIsActive) siteHeader.classList.add("interaction-hidden");
+  }, 2200);
+}
+
+chatPanel.addEventListener("focusin", () => {
+  chatIsActive = true;
+  siteHeader.classList.add("interaction-hidden");
+});
 chatPanel.addEventListener("focusout", () => {
   window.setTimeout(() => {
-    if (!chatPanel.contains(document.activeElement)) document.querySelector(".site-header").classList.remove("interaction-hidden");
+    if (!chatPanel.contains(document.activeElement)) {
+      chatIsActive = false;
+      window.clearTimeout(headerHideTimer);
+      siteHeader.classList.remove("interaction-hidden");
+    }
   }, 0);
 });
+window.addEventListener("pointermove", revealHeaderDuringChat, { passive: true });
+window.addEventListener("touchstart", revealHeaderDuringChat, { passive: true });
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
