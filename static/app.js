@@ -4,6 +4,8 @@ const resultsSection = document.querySelector("#results");
 const resultsGrid = document.querySelector("#results-grid");
 const status = document.querySelector("#status");
 let chatSessionId = null;
+let currentWines = [];
+let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -37,6 +39,7 @@ function scoreLabel(score, bestScore) {
 }
 
 function renderWines(wines, body) {
+  currentWines = wines;
   if (body.source === "grounded_search" && body.reference_wine) {
     const reference = body.reference_wine;
     status.innerHTML = `<p class="search-note"><strong>Found online:</strong> ${escapeHtml(reference.Title)} · ${escapeHtml(reference.Grape)} · ${escapeHtml(reference.Region || reference.Country)}. These catalog wines share its profile.</p>`;
@@ -59,8 +62,43 @@ function renderWines(wines, body) {
         <span class="price">${escapeHtml(wine.Price || "Price varies")}</span>
         <span class="score">${scoreLabel(wine.similarity_score, bestScore)}</span>
       </div>
+      <button class="save-wine ${savedWines.some((saved) => saved.Title === wine.Title) ? "saved" : ""}" data-wine-index="${index}">${savedWines.some((saved) => saved.Title === wine.Title) ? "✓ Saved to my list" : "+ Add to my list"}</button>
     </article>
   `).join("");
+}
+
+function saveWineList() {
+  localStorage.setItem("winepair_saved_wines", JSON.stringify(savedWines));
+  document.querySelector("#wine-list-count").textContent = savedWines.length;
+  renderSavedWines();
+}
+
+function renderSavedWines() {
+  const container = document.querySelector("#saved-wines");
+  if (!savedWines.length) {
+    container.innerHTML = '<div class="empty-list">Your list is waiting for its first bottle.<br>Save any recommendation to add it here.</div>';
+    return;
+  }
+  container.innerHTML = savedWines.map((wine, index) => `
+    <article class="saved-wine">
+      <h3>${escapeHtml(wine.Title)}</h3>
+      <p>${escapeHtml(wine.Grape || "Distinctive blend")} · ${escapeHtml([wine.Region, wine.Country].filter(Boolean).join(", "))}</p>
+      <strong>${escapeHtml(wine.Price || "Price varies")}</strong>
+      <button class="remove-wine" data-saved-index="${index}" aria-label="Remove ${escapeHtml(wine.Title)}">×</button>
+    </article>
+  `).join("");
+}
+
+function openWineList() {
+  document.querySelector("#wine-list-drawer").classList.add("open");
+  document.querySelector("#wine-list-drawer").setAttribute("aria-hidden", "false");
+  document.querySelector("#list-backdrop").hidden = false;
+}
+
+function closeWineList() {
+  document.querySelector("#wine-list-drawer").classList.remove("open");
+  document.querySelector("#wine-list-drawer").setAttribute("aria-hidden", "true");
+  document.querySelector("#list-backdrop").hidden = true;
 }
 
 async function requestRecommendations(path, payload) {
@@ -151,3 +189,31 @@ document.querySelectorAll(".chat-suggestions button").forEach((button) => {
 document.querySelector("#start-over").addEventListener("click", () => {
   document.querySelector("#finder").scrollIntoView({ behavior: "smooth" });
 });
+
+document.querySelector("#results-grid").addEventListener("click", (event) => {
+  const button = event.target.closest(".save-wine");
+  if (!button) return;
+  const wine = currentWines[Number(button.dataset.wineIndex)];
+  if (!wine) return;
+  const existingIndex = savedWines.findIndex((saved) => saved.Title === wine.Title);
+  if (existingIndex >= 0) savedWines.splice(existingIndex, 1);
+  else savedWines.push(wine);
+  saveWineList();
+  button.classList.toggle("saved", existingIndex < 0);
+  button.textContent = existingIndex < 0 ? "✓ Saved to my list" : "+ Add to my list";
+});
+
+document.querySelector("#saved-wines").addEventListener("click", (event) => {
+  const button = event.target.closest(".remove-wine");
+  if (!button) return;
+  savedWines.splice(Number(button.dataset.savedIndex), 1);
+  saveWineList();
+  renderWines(currentWines, {});
+});
+
+document.querySelector("#open-wine-list").addEventListener("click", openWineList);
+document.querySelector("#close-wine-list").addEventListener("click", closeWineList);
+document.querySelector("#list-backdrop").addEventListener("click", closeWineList);
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeWineList(); });
+
+saveWineList();

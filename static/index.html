@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=3" defer></script>
+  <script src="/static/app.js?v=4" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -20,6 +20,7 @@
     <nav aria-label="Main navigation">
       <a href="#discover">Discover</a>
       <a href="#how-it-works">How it works</a>
+      <button id="open-wine-list" class="list-link" type="button">My list <span id="wine-list-count">0</span></button>
       <a class="nav-cta" href="#finder">Find my wine</a>
     </nav>
   </header>
@@ -141,6 +142,16 @@
       </div>
     </section>
   </main>
+
+  <div id="list-backdrop" class="list-backdrop" hidden></div>
+  <aside id="wine-list-drawer" class="wine-list-drawer" aria-labelledby="wine-list-title" aria-hidden="true">
+    <div class="list-header">
+      <div><p class="eyebrow"><span></span> Your cellar</p><h2 id="wine-list-title">My Wine List</h2></div>
+      <button id="close-wine-list" type="button" aria-label="Close wine list">×</button>
+    </div>
+    <div id="saved-wines" class="saved-wines"></div>
+    <p class="list-footnote">Saved privately in this browser.</p>
+  </aside>
 
   <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">W</span><span>WinePair</span></a><p>Thoughtful recommendations. Better bottles.</p><p class="tech-note">Google ADK · Gemini · FastAPI · scikit-learn</p></footer>
 </body>
