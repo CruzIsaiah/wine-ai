@@ -1,15 +1,21 @@
 # 🍷 WinePair AI
 
-WinePair AI (codename: **wine-adk**) is a virtual sommelier powered by **Google ADK** and **Gemini 2.0 Flash**.  
-It uses a **content-based recommendation system** to suggest wines similar to ones a user already enjoys, then delivers friendly, natural explanations through an AI sommelier agent.
+WinePair AI is a grounded virtual sommelier powered by Google ADK and Gemini 3.6 Flash. It combines a deterministic TF-IDF recommendation engine, a validated FastAPI service, and grounded search for wines outside the local catalog.
+
+## Documentation
+
+- [Complete project and architecture guide](docs/PROJECT_GUIDE.md)
+- [Presentation outline and talk track](docs/PRESENTATION_GUIDE.md)
 
 ---
 
 ## 🚀 Features
 - 🧠 **Content-based recommender** using TF-IDF + cosine similarity (`pandas`, `scikit-learn`)
-- 🤖 **Sommelier agent** built with `google-adk` + `google-generativeai`
+- 🤖 **Conversational manager** built with Google ADK and Gemini
 - ⚡ **FastAPI backend** for serving recommendations and agent responses
 - 🌐 **ADK Web** interface for local chat and testing
+- 🔎 **Grounded Google Search** fallback for unknown wines
+- ✅ **13 automated tests** covering ranking, API behavior, and tool handoffs
 
 ---
 
@@ -18,7 +24,7 @@ It uses a **content-based recommendation system** to suggest wines similar to on
 |------------|----------|
 | Backend API | FastAPI + Uvicorn |
 | Recommender Engine | scikit-learn, pandas, numpy |
-| Agent Framework | google-adk, google-generativeai |
+| Agent Framework | google-adk, google-genai |
 | Utilities | python-dotenv, requests |
 
 ---
@@ -40,14 +46,23 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 ```
 GOOGLE_API_KEY=your_api_key_here
+API_RATE_LIMIT_PER_MINUTE=60
 ```
 
 ### 4️⃣ Start the FastAPI app
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Then open **ADK Web** in your browser if enabled in `main.py`.
+### 5️⃣ Start ADK Web
+
+```bash
+adk web --port 8001 .
+```
+
+Open `http://127.0.0.1:8001` and select the `manager` app.
+
+The API defaults to 60 requests per minute per client. Change `API_RATE_LIMIT_PER_MINUTE` in `.env` to adjust it. Requests above the limit receive HTTP `429` and a `Retry-After` header.
 
 ---
 
@@ -59,4 +74,10 @@ Then open **ADK Web** in your browser if enabled in `main.py`.
 ---
 
 ## 🧪 Methodology
-The recommendation engine computes a **TF-IDF matrix** of all wine descriptions and uses **cosine similarity** to find wines with the most similar flavor profiles and attributes to the user’s input wine.
+The recommendation engine builds a weighted TF-IDF matrix from wine type, style, characteristics, grape, description, region, and country. Explicit type and geographic preferences are applied as hard filters before cosine-similarity ranking.
+
+## Tests
+
+```bash
+python -m pytest -q
+```

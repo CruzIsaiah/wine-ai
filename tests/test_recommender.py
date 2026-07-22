@@ -23,7 +23,7 @@ if __name__ == "__main__":
                 "sweetness": "sweet",
                 "body": "light",
                 "flavor_notes": "fruity",
-                "region": "spain"
+                "region": "any"
             }
         },
         {
