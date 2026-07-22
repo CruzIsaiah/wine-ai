@@ -4,9 +4,9 @@ WinePair AI is a personalized wine discovery and tasting-journal application pow
 
 ## Demo
 
-[![Watch the WinePair AI demo](docs/demo/winepair-demo-poster.jpg)](docs/demo/winepair-demo.mp4)
+[![Watch the WinePair AI demo](docs/demo/demo-poster.jpg)](docs/demo/demo.mp4)
 
-[▶ Watch the full silent demo](docs/demo/winepair-demo.mp4)
+[▶ Watch the demo](docs/demo/demo.mp4)
 
 ## Current Experience
 
