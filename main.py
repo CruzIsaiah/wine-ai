@@ -145,7 +145,11 @@ website_chat_agent = Agent(
         "use established general sommelier knowledge for grape education, likely food pairings, serving "
         "temperature, and glassware, while keeping catalog facts unchanged. If 'tell me more' does not "
         "identify which wine, ask the user to choose one or briefly describe the existing list. Only "
-        "fetch a new set when the user explicitly asks for more, different, alternative, or new wines."
+        "fetch a new set when the user explicitly asks for more, different, alternative, or new wines. "
+        "For follow-up answers, aim for 80-120 words and never exceed 150 words. Begin with one or two "
+        "short explanatory sentences, then use no more than five concise bullets for tasting notes, food "
+        "pairings, serving advice, or key characteristics. Answer only what was asked, avoid long wine "
+        "backgrounds and repeated metadata, and do not add extra sections unless they are directly useful."
     ),
     tools=[send_to_recommender],
 )
