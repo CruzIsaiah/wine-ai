@@ -6,7 +6,6 @@ const status = document.querySelector("#status");
 let chatSessionId = null;
 let currentWines = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
-let triedWines = JSON.parse(localStorage.getItem("winepair_tried_wines") || "[]");
 const chatWineResults = new Map();
 let detailsWine = null;
 
@@ -125,35 +124,6 @@ function renderSavedWines() {
       <button class="remove-wine" data-saved-index="${index}" aria-label="Remove ${escapeHtml(wine.Title)}">×</button>
     </article>
   `).join("");
-}
-
-function saveTastingJournal() {
-  localStorage.setItem("winepair_tried_wines", JSON.stringify(triedWines));
-  document.querySelector("#tried-count").textContent = triedWines.length;
-  renderTastingJournal();
-}
-
-function renderTastingJournal() {
-  const container = document.querySelector("#tried-wines");
-  if (!triedWines.length) {
-    container.innerHTML = '<div class="empty-list">No tasting notes yet.<br>Add a wine after you try it.</div>';
-    return;
-  }
-  container.innerHTML = triedWines.map((entry, index) => `
-    <article class="tasting-entry">
-      <h3>${escapeHtml(entry.wine_name)}</h3>
-      <span class="tasting-stars">${"★".repeat(entry.rating)}${"☆".repeat(5 - entry.rating)}</span>
-      <span class="tasting-date">${escapeHtml(entry.date_tried)}</span>
-      ${entry.attributes?.length ? `<div class="entry-attributes">${entry.attributes.map((attribute) => `<span>${escapeHtml(attribute)}</span>`).join("")}</div>` : ""}
-      ${entry.notes ? `<p>${escapeHtml(entry.notes)}</p>` : ""}
-      <button class="delete-tasting" data-tasting-index="${index}" aria-label="Delete tasting note for ${escapeHtml(entry.wine_name)}">×</button>
-    </article>
-  `).join("");
-}
-
-function showCellarPanel(name) {
-  document.querySelectorAll(".cellar-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.cellarTab === name));
-  document.querySelectorAll(".cellar-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.cellarPanel === name));
 }
 
 function openWineList() {
@@ -318,12 +288,7 @@ document.querySelector("#results-grid").addEventListener("click", (event) => {
 document.querySelector("#saved-wines").addEventListener("click", (event) => {
   const triedButton = event.target.closest(".tried-wine-action");
   if (triedButton) {
-    const form = document.querySelector("#tasting-form");
-    form.elements.wine_name.value = triedButton.dataset.triedTitle;
-    form.elements.source_title.value = triedButton.dataset.triedTitle;
-    form.elements.date_tried.value = new Date().toISOString().slice(0, 10);
-    showCellarPanel("tried");
-    form.elements.rating.focus();
+    window.location.href = `/journal?wine=${encodeURIComponent(triedButton.dataset.triedTitle)}`;
     return;
   }
   const button = event.target.closest(".remove-wine");
@@ -331,36 +296,6 @@ document.querySelector("#saved-wines").addEventListener("click", (event) => {
   savedWines.splice(Number(button.dataset.savedIndex), 1);
   saveWineList();
   renderWines(currentWines, {});
-});
-
-document.querySelectorAll(".cellar-tab").forEach((tab) => {
-  tab.addEventListener("click", () => showCellarPanel(tab.dataset.cellarTab));
-});
-
-document.querySelector("#tasting-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const values = Object.fromEntries(new FormData(form));
-  triedWines.unshift({
-    wine_name: values.wine_name.trim(),
-    rating: Number(values.rating),
-    date_tried: values.date_tried,
-    notes: values.notes.trim(),
-  });
-  if (values.source_title) {
-    savedWines = savedWines.filter((wine) => wine.Title !== values.source_title);
-    saveWineList();
-  }
-  saveTastingJournal();
-  form.reset();
-  form.elements.date_tried.value = new Date().toISOString().slice(0, 10);
-});
-
-document.querySelector("#tried-wines").addEventListener("click", (event) => {
-  const button = event.target.closest(".delete-tasting");
-  if (!button) return;
-  triedWines.splice(Number(button.dataset.tastingIndex), 1);
-  saveTastingJournal();
 });
 
 document.querySelector("#open-wine-list").addEventListener("click", openWineList);
@@ -429,5 +364,3 @@ document.querySelector("#close-wine-details").addEventListener("click", closeWin
 document.querySelector("#wine-detail-backdrop").addEventListener("click", closeWineDetails);
 
 saveWineList();
-document.querySelector("#tasting-form").elements.date_tried.value = new Date().toISOString().slice(0, 10);
-saveTastingJournal();

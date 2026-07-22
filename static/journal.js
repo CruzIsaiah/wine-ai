@@ -107,3 +107,10 @@ document.querySelector("#cancel-edit").addEventListener("click", resetJournalFor
 
 renderSavedToRate();
 renderEntries();
+
+const requestedWine = new URLSearchParams(window.location.search).get("wine");
+if (requestedWine) {
+  const savedWine = savedWines.find((wine) => wine.Title === requestedWine);
+  populateJournalForm({wine_name:requestedWine,date_tried:new Date().toISOString().slice(0,10),attributes:[],notes:""});
+  if (savedWine) form.elements.source_title.value = savedWine.Title;
+}
