@@ -12,6 +12,14 @@ class WineRecommender:
         print(f"📂 Loading wine data from: {csv_path}")
         self.wine_df = pd.read_csv(csv_path)
         self.wine_df["price_gbp"] = self.wine_df["Price"].apply(self._parse_price)
+        self.wine_df["is_case_product"] = (
+            self.wine_df["Title"].fillna("").str.contains(
+                r"\bcase\b", case=False, regex=True
+            )
+            | self.wine_df["Price"].fillna("").str.contains(
+                "per case", case=False, regex=False
+            )
+        )
 
         # Weighted descriptive fields
         self.wine_df["combined_text"] = (
@@ -71,7 +79,7 @@ class WineRecommender:
             similarity_scores, nan=0.0, posinf=0.0, neginf=0.0
         )
 
-        candidate_mask = pd.Series(True, index=self.wine_df.index)
+        candidate_mask = ~self.wine_df["is_case_product"]
         wine_type = prefs.get("type", "").strip().lower().replace(" wine", "")
         if wine_type and wine_type != "any":
             candidate_mask &= self.wine_df["Type"].fillna("").str.contains(
@@ -121,6 +129,7 @@ class WineRecommender:
             self.tfidf_matrix[selected_index], self.tfidf_matrix
         )[0]
         similarity_scores[selected_index] = -1
+        similarity_scores[self.wine_df["is_case_product"].to_numpy()] = -1
         top_indices = similarity_scores.argsort()[::-1][:5]
         return self._serialize_results(top_indices, similarity_scores)
 
@@ -174,6 +183,7 @@ class WineRecommender:
         )
         eligible_indices = self.wine_df.index[
             ~self.wine_df["Title"].isin(rated_wines.keys())
+            & ~self.wine_df["is_case_product"]
         ].to_numpy()
         ranked_indices = eligible_indices[
             similarity_scores[eligible_indices].argsort()[::-1]

@@ -54,11 +54,22 @@ def test_preferences_enforce_usd_price_range(recommender):
     assert all(11.85 <= price <= 15.8 for price in prices)
 
 
+def test_preferences_never_return_case_products(recommender):
+    results = recommender.recommend_by_preferences(
+        {"type": "red", "flavor_notes": "bold fruity"}
+    )
+
+    assert results
+    assert all("case" not in result["Title"].lower() for result in results)
+    assert all("per case" not in result["Price"].lower() for result in results)
+
+
 def test_title_recommendations_exclude_selected_wine(recommender):
     results = recommender.recommend_by_title("The Guv'nor")
 
     assert len(results) == 5
     assert all("The Guv'nor, Spain" != result["Title"] for result in results)
+    assert all("case" not in result["Title"].lower() for result in results)
 
 
 def test_unknown_title_returns_none(recommender):
