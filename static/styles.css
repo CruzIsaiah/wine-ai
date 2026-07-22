@@ -17,7 +17,10 @@ button, input, select { font: inherit; }
 a { color: inherit; text-decoration: none; }
 
 .site-header { height: 72px; padding: 0 clamp(24px, 6vw, 96px); display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; width: 100%; z-index: 100; color: white; background: rgba(76,15,34,.94); border-bottom: 1px solid rgba(255,255,255,.12); box-shadow: 0 8px 24px rgba(40,8,17,.12); backdrop-filter: blur(14px); transition: background .25s ease, box-shadow .25s ease, border-color .25s ease; }
-.site-header.scrolled { background: rgba(76,15,34,.68); border-bottom-color: rgba(255,255,255,.18); box-shadow: 0 8px 24px rgba(40,8,17,.08); backdrop-filter: blur(18px) saturate(125%); }
+.site-header.scrolled { background: transparent; border-bottom-color: transparent; box-shadow: none; backdrop-filter: none; }
+.site-header nav, .site-header .brand { transition: background .25s ease, box-shadow .25s ease, padding .25s ease; }
+.site-header.scrolled nav { padding: 7px 9px 7px 18px; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: rgba(55,9,24,.72); box-shadow: 0 8px 24px rgba(35,5,14,.14); backdrop-filter: blur(18px) saturate(130%); }
+.site-header.scrolled .brand { padding: 5px 11px 5px 6px; border-radius: 999px; background: rgba(55,9,24,.62); box-shadow: 0 8px 24px rgba(35,5,14,.12); backdrop-filter: blur(18px) saturate(130%); }
 .site-header.scrolled nav a, .site-header.scrolled nav button, .site-header.scrolled .brand { text-shadow: 0 1px 8px rgba(35,5,14,.55); }
 .brand { display: inline-flex; align-items: center; gap: 11px; font-family: "Playfair Display", serif; font-size: 22px; font-weight: 700; }
 .brand-mark { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.6); border-radius: 50%; display: grid; place-items: center; font-style: italic; }
