@@ -36,6 +36,38 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function renderMarkdown(value) {
+  const inline = (text) => escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*]+?)\*/g, "$1<em>$2</em>");
+  const lines = String(value ?? "").split(/\r?\n/);
+  const output = [];
+  let listItems = [];
+  const closeList = () => {
+    if (!listItems.length) return;
+    output.push(`<ul>${listItems.map((item) => `<li>${inline(item)}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    const listMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (listMatch) {
+      listItems.push(listMatch[1]);
+      return;
+    }
+    closeList();
+    if (!trimmed) return;
+    if (/^---+$/.test(trimmed)) output.push("<hr>");
+    else if (/^###\s+/.test(trimmed)) output.push(`<h4>${inline(trimmed.replace(/^###\s+/, ""))}</h4>`);
+    else if (/^##\s+/.test(trimmed)) output.push(`<h3>${inline(trimmed.replace(/^##\s+/, ""))}</h3>`);
+    else if (/^#\s+/.test(trimmed)) output.push(`<h2>${inline(trimmed.replace(/^#\s+/, ""))}</h2>`);
+    else output.push(`<p>${inline(trimmed)}</p>`);
+  });
+  closeList();
+  return output.join("");
+}
+
 function scoreLabel(score, bestScore) {
   if (typeof score !== "number" || bestScore <= 0) return "Great match";
   return `${Math.max(1, Math.round((score / bestScore) * 100))}% relative match`;
@@ -184,12 +216,9 @@ function addChatMessage(text, role, wines = []) {
   const messages = document.querySelector("#chat-messages");
   const message = document.createElement("div");
   message.className = `chat-message ${role}`;
-  const formattedText = escapeHtml(text)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n/g, "<br>");
   message.innerHTML = role === "assistant"
-    ? `<span class="chat-avatar">W</span><p>${formattedText}</p>`
-    : `<p>${formattedText}</p>`;
+    ? `<span class="chat-avatar">W</span><div class="chat-bubble">${renderMarkdown(text)}</div>`
+    : `<div class="chat-bubble"><p>${escapeHtml(text)}</p></div>`;
   if (role === "assistant" && wines.length) {
     const options = document.createElement("div");
     options.className = "chat-wine-options";
@@ -359,7 +388,7 @@ function addDetailMessage(text, role="assistant") {
   const conversation = document.querySelector("#detail-conversation");
   const message = document.createElement("div");
   message.className = `detail-message ${role}`;
-  message.innerHTML = `<p>${escapeHtml(text).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")}</p>`;
+  message.innerHTML = `<div class="detail-bubble">${role === "assistant" ? renderMarkdown(text) : `<p>${escapeHtml(text)}</p>`}</div>`;
   conversation.appendChild(message);
   conversation.scrollTop = conversation.scrollHeight;
 }

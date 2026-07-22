@@ -89,9 +89,10 @@ input:focus, select:focus { border-color: var(--wine); }
 .chat-panel { padding: 0; }
 .chat-messages { height: 390px; overflow-y: auto; padding: 35px 38px 18px; background: #fbf7f0; }
 .chat-message { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
-.chat-message p { max-width: 72%; margin: 0; padding: 13px 16px; border-radius: 2px 14px 14px 14px; background: white; color: #514746; font-size: 13px; line-height: 1.65; white-space: pre-wrap; box-shadow: 0 5px 18px rgba(61,33,27,.07); }
+.chat-bubble { max-width: 72%; padding: 13px 16px; border-radius: 2px 14px 14px 14px; background: white; color: #514746; font-size: 13px; line-height: 1.65; box-shadow: 0 5px 18px rgba(61,33,27,.07); }
+.chat-bubble p { margin: 0 0 8px; }.chat-bubble p:last-child { margin-bottom: 0; }.chat-bubble h2,.chat-bubble h3,.chat-bubble h4 { margin: 10px 0 5px; color: var(--wine-dark); font-family: "Playfair Display",serif; }.chat-bubble h2:first-child,.chat-bubble h3:first-child,.chat-bubble h4:first-child { margin-top: 0; }.chat-bubble ul { margin: 5px 0 10px; padding-left: 20px; }.chat-bubble li { margin-bottom: 4px; }.chat-bubble hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
 .chat-message.user { justify-content: flex-end; }
-.chat-message.user p { background: var(--wine); color: white; border-radius: 14px 2px 14px 14px; }
+.chat-message.user .chat-bubble { background: var(--wine); color: white; border-radius: 14px 2px 14px 14px; }
 .chat-message.assistant { flex-wrap: wrap; }
 .chat-wine-options { width: calc(100% - 40px); margin: -8px 0 8px 40px; display: grid; gap: 7px; }
 .chat-wine-option { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px; padding: 11px 13px; background: white; border: 1px solid var(--line); }
@@ -185,7 +186,7 @@ footer { background: var(--wine-deep); color: rgba(255,255,255,.6); padding: 42p
 .wine-detail-panel.open { transform:translateX(0); }
 .detail-header { padding:32px 30px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:flex-start; }
 .detail-header h2 { color:var(--wine-dark); font-size:32px; line-height:1.1; }.detail-header > button { border:0; background:transparent; color:var(--wine); font-size:30px; cursor:pointer; }.detail-header > div > p:last-child { color:var(--muted); font-size:11px; margin-bottom:0; }
-.detail-conversation { flex:1; overflow-y:auto; padding:24px 30px; background:#fbf7f0; }.detail-message { margin-bottom:14px; display:flex; }.detail-message p { margin:0; max-width:85%; padding:12px 14px; background:white; color:#514746; border-radius:2px 12px 12px 12px; font-size:12px; line-height:1.65; white-space:pre-wrap; }.detail-message.user { justify-content:flex-end; }.detail-message.user p { background:var(--wine); color:white; border-radius:12px 2px 12px 12px; }.detail-thinking { color:var(--muted); font-size:11px; }
+.detail-conversation { flex:1; overflow-y:auto; padding:24px 30px; background:#fbf7f0; }.detail-message { margin-bottom:14px; display:flex; }.detail-bubble { max-width:85%; padding:12px 14px; background:white; color:#514746; border-radius:2px 12px 12px 12px; font-size:12px; line-height:1.65; }.detail-bubble p { margin:0 0 7px; }.detail-bubble p:last-child { margin-bottom:0; }.detail-bubble h2,.detail-bubble h3,.detail-bubble h4 { margin:9px 0 4px; color:var(--wine-dark); font-family:"Playfair Display",serif; }.detail-bubble ul { margin:4px 0 8px; padding-left:18px; }.detail-bubble hr { border:0; border-top:1px solid var(--line); margin:9px 0; }.detail-message.user { justify-content:flex-end; }.detail-message.user .detail-bubble { background:var(--wine); color:white; border-radius:12px 2px 12px 12px; }.detail-thinking { color:var(--muted); font-size:11px; }
 .detail-suggestions { display:flex; gap:7px; overflow-x:auto; padding:12px 30px 4px; }.detail-suggestions button { white-space:nowrap; border:1px solid var(--line); border-radius:99px; background:white; color:var(--wine); padding:7px 10px; cursor:pointer; font-size:10px; }
 .detail-input-row { display:flex; gap:10px; align-items:center; padding:10px 30px 25px; }.detail-input-row input { flex:1; }.detail-input-row button { width:40px; height:40px; border:0; border-radius:50%; background:var(--wine); color:white; cursor:pointer; font-size:17px; }
 
