@@ -42,7 +42,7 @@ class WineRecommender:
         match = re.search(r"(?:£|\$|€)?\s*(\d+(?:\.\d{1,2})?)", str(value))
         return float(match.group(1)) if match else np.nan
 
-    def _serialize_results(self, indices, similarity_scores):
+    def _serialize_results(self, indices, similarity_scores, currency="GBP"):
         columns = ["Title", "Grape", "Country", "Region", "Style", "Price"]
         results = self.wine_df.loc[indices, columns].copy()
         results["similarity_score"] = [
@@ -50,7 +50,23 @@ class WineRecommender:
         ]
         results = results.replace([np.inf, -np.inf], None)
         results = results.astype(object).where(pd.notna(results), None)
+        if currency != "GBP":
+            results["Price"] = results["Price"].apply(
+                lambda value: self._format_price(value, currency)
+            )
         return results.to_dict(orient="records")
+
+    @classmethod
+    def _format_price(cls, value, currency):
+        price_gbp = cls._parse_price(value)
+        if np.isnan(price_gbp):
+            return value
+        conversion = cls.CURRENCY_TO_GBP.get(currency, 1.0)
+        converted = price_gbp / conversion
+        symbol = {"USD": "$", "EUR": "€"}.get(currency, "£")
+        unit_match = re.search(r"\b(per bottle|per case|each)\b", str(value), re.I)
+        unit = f" {unit_match.group(1).lower()}" if unit_match else ""
+        return f"{symbol}{converted:.2f}{unit}"
 
     # ------------------------------
     # 1️⃣ User Preference Recommender
@@ -114,7 +130,9 @@ class WineRecommender:
         ranked_candidates = candidate_indices[
             similarity_scores[candidate_indices].argsort()[::-1]
         ]
-        return self._serialize_results(ranked_candidates[:5], similarity_scores)
+        return self._serialize_results(
+            ranked_candidates[:5], similarity_scores, currency=currency
+        )
 
     def recommend_by_title(self, title):
         matches = self.wine_df[

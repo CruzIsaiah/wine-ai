@@ -129,8 +129,8 @@ def test_preferences_endpoint_enforces_price_range():
     assert response.status_code == 200
     recommendations = response.json()["recommendations"]
     assert recommendations
-    prices = [float(wine["Price"].split("£")[1].split()[0]) for wine in recommendations]
-    assert all(11.85 <= price <= 15.8 for price in prices)
+    prices = [float(wine["Price"].split("$")[1].split()[0]) for wine in recommendations]
+    assert all(15 <= price <= 20 for price in prices)
 
 
 def test_invalid_price_range_is_rejected():

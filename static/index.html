@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=6" defer></script>
+  <script src="/static/app.js?v=7" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -98,7 +98,7 @@
             <label><span>Region or country</span><input name="region" placeholder="e.g. France, California, Rioja"></label>
             <label><span>Minimum price</span><input name="min_price" type="number" min="0" step="1" placeholder="15"></label>
             <label><span>Maximum price</span><input name="max_price" type="number" min="0" step="1" placeholder="20"></label>
-            <label><span>Currency</span><select name="currency"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option></select></label>
+            <label><span>Currency</span><select name="currency"><option value="USD" selected>USD ($)</option><option value="GBP">GBP (£)</option><option value="EUR">EUR (€)</option></select></label>
           </div>
           <button class="button button-gold submit-button" type="submit"><span>Find my wines</span><span class="button-arrow">→</span></button>
         </form>

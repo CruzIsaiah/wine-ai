@@ -34,7 +34,7 @@ class WinePreferences(BaseModel):
     region: str = Field(default="", max_length=100)
     min_price: float | None = Field(default=None, ge=0, le=10000)
     max_price: float | None = Field(default=None, ge=0, le=10000)
-    currency: str = Field(default="GBP", pattern="^(GBP|USD|EUR)$")
+    currency: str = Field(default="USD", pattern="^(GBP|USD|EUR)$")
 
     @field_validator("type", "sweetness", "body", "flavor_notes", "region")
     @classmethod

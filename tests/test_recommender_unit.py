@@ -51,7 +51,8 @@ def test_preferences_enforce_usd_price_range(recommender):
 
     assert results
     prices = [recommender._parse_price(result["Price"]) for result in results]
-    assert all(11.85 <= price <= 15.8 for price in prices)
+    assert all(15 <= price <= 20 for price in prices)
+    assert all(result["Price"].startswith("$") for result in results)
 
 
 def test_preferences_never_return_case_products(recommender):

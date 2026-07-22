@@ -158,12 +158,24 @@ async function requestRecommendations(path, payload) {
   }
 }
 
-document.querySelector("#preferences-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const preferences = Object.fromEntries(new FormData(event.currentTarget));
+function getPreferencePayload() {
+  const preferences = Object.fromEntries(
+    new FormData(document.querySelector("#preferences-form"))
+  );
   preferences.min_price = preferences.min_price ? Number(preferences.min_price) : null;
   preferences.max_price = preferences.max_price ? Number(preferences.max_price) : null;
-  requestRecommendations("/recommend/preferences", preferences);
+  return preferences;
+}
+
+document.querySelector("#preferences-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  requestRecommendations("/recommend/preferences", getPreferencePayload());
+});
+
+document.querySelector('#preferences-form select[name="currency"]').addEventListener("change", () => {
+  if (currentWines.length) {
+    requestRecommendations("/recommend/preferences", getPreferencePayload());
+  }
 });
 
 function addChatMessage(text, role, wines = []) {
