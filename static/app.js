@@ -16,6 +16,14 @@ function updateHeaderAppearance() {
 window.addEventListener("scroll", updateHeaderAppearance, { passive: true });
 updateHeaderAppearance();
 
+const chatPanel = document.querySelector("#chat-panel");
+chatPanel.addEventListener("focusin", () => document.querySelector(".site-header").classList.add("interaction-hidden"));
+chatPanel.addEventListener("focusout", () => {
+  window.setTimeout(() => {
+    if (!chatPanel.contains(document.activeElement)) document.querySelector(".site-header").classList.remove("interaction-hidden");
+  }, 0);
+});
+
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     tabs.forEach((item) => {
