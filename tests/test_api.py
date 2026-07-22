@@ -56,8 +56,47 @@ def test_title_endpoint_returns_similar_wines():
 
 
 def test_unknown_title_returns_not_found():
-    response = client.post(
-        "/recommend/title", json={"title": "Definitely Not A Real Wine"}
-    )
+    from unittest.mock import patch
+
+    with patch("main.find_external_wine", return_value=None):
+        response = client.post(
+            "/recommend/title", json={"title": "Definitely Not A Real Wine"}
+        )
 
     assert response.status_code == 404
+
+
+def test_unknown_catalog_wine_uses_grounded_search():
+    from unittest.mock import patch
+
+    external_wine = {
+        "Title": "Josh Cellars Cabernet Sauvignon, California",
+        "Type": "Red",
+        "Grape": "Cabernet Sauvignon",
+        "Region": "California",
+        "Country": "USA",
+        "Style": "Full-bodied",
+        "Characteristics": "blackberry, vanilla, oak",
+        "Price": "$17",
+    }
+    with patch("main.find_external_wine", return_value=external_wine):
+        response = client.post(
+            "/recommend/title", json={"title": "Josh Cabernet Sauvignon"}
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "grounded_search"
+    assert body["reference_wine"]["Title"].startswith("Josh Cellars")
+    assert len(body["recommendations"]) == 5
+
+
+def test_search_service_failure_returns_bad_gateway():
+    from unittest.mock import patch
+
+    with patch("main.find_external_wine", side_effect=RuntimeError("search unavailable")):
+        response = client.post(
+            "/recommend/title", json={"title": "Unknown External Wine"}
+        )
+
+    assert response.status_code == 502

@@ -35,7 +35,13 @@ function scoreLabel(score) {
   return `${Math.max(1, Math.round(score * 100))}% match`;
 }
 
-function renderWines(wines) {
+function renderWines(wines, body) {
+  if (body.source === "grounded_search" && body.reference_wine) {
+    const reference = body.reference_wine;
+    status.innerHTML = `<p class="search-note"><strong>Found online:</strong> ${escapeHtml(reference.Title)} · ${escapeHtml(reference.Grape)} · ${escapeHtml(reference.Region || reference.Country)}. These catalog wines share its profile.</p>`;
+  } else {
+    status.innerHTML = "";
+  }
   if (!wines.length) {
     resultsGrid.innerHTML = '<div class="empty-state"><strong>No exact matches yet.</strong><br>Try broadening the region or choosing “Surprise me.”</div>';
     return;
@@ -73,8 +79,7 @@ async function requestRecommendations(path, payload) {
       if (response.status === 404) throw new Error("We couldn't find that bottle. Try a shorter part of its name.");
       throw new Error(typeof body.detail === "string" ? body.detail : "We couldn't complete that tasting. Please try again.");
     }
-    status.innerHTML = "";
-    renderWines(body.recommendations || []);
+    renderWines(body.recommendations || [], body);
   } catch (error) {
     status.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
   }

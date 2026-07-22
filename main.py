@@ -5,11 +5,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
 from rate_limit import InMemoryRateLimiter
 from recommender.recommender import WineRecommender
+from external_wine_search import find_external_wine
+
+
+load_dotenv()
 
 
 class WinePreferences(BaseModel):
@@ -38,6 +43,8 @@ class WineTitleRequest(BaseModel):
 
 class RecommendationResponse(BaseModel):
     recommendations: list[dict[str, Any]]
+    source: str = "catalog"
+    reference_wine: dict[str, Any] | None = None
 
 
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
@@ -106,6 +113,32 @@ def recommend_preferences(preferences: WinePreferences):
 @app.post("/recommend/title", response_model=RecommendationResponse)
 def recommend_title(request: WineTitleRequest):
     results = recommender.recommend_by_title(request.title)
-    if results is None:
+    if results is not None:
+        return RecommendationResponse(recommendations=results)
+
+    try:
+        external_wine = find_external_wine(request.title)
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail="The online wine search is temporarily unavailable.",
+        ) from error
+    if external_wine is None:
         raise HTTPException(status_code=404, detail={"wine_not_found": request.title})
-    return RecommendationResponse(recommendations=results)
+
+    preferences = {
+        "type": external_wine["Type"],
+        "sweetness": "",
+        "body": external_wine["Style"],
+        "flavor_notes": external_wine["Characteristics"],
+        "region": external_wine["Country"],
+    }
+    results = recommender.recommend_by_preferences(preferences)
+    if not results:
+        preferences["region"] = ""
+        results = recommender.recommend_by_preferences(preferences)
+    return RecommendationResponse(
+        recommendations=results,
+        source="grounded_search",
+        reference_wine=external_wine,
+    )

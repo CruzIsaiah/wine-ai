@@ -57,6 +57,8 @@ uvicorn main:app --host 127.0.0.1 --port 8000
 
 Open `http://127.0.0.1:8000` to use the presentation-ready website. The frontend is served by FastAPI and calls the recommendation endpoints directly.
 
+When a title is not in the local catalog, the similar-wine finder uses grounded Google Search to identify its style and tasting profile, then recommends the closest catalog matches.
+
 ### 5️⃣ Start ADK Web
 
 ```bash
