@@ -171,6 +171,11 @@ def home():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
 
+@app.get("/journal")
+def journal():
+    return FileResponse(os.path.join(static_dir, "journal.html"))
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "wines_loaded": len(recommender.wine_df)}

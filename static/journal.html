@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasting Journal — WinePair</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/journal.css">
+  <script src="/static/journal.js?v=1" defer></script>
+</head>
+<body class="journal-page">
+  <header class="journal-header">
+    <a class="brand" href="/"><span class="brand-mark">W</span><span>WinePair</span></a>
+    <a class="back-link" href="/">← Back to wine finder</a>
+  </header>
+
+  <main>
+    <section class="journal-hero">
+      <p class="eyebrow"><span></span> Your personal cellar notes</p>
+      <h1>Tasting <em>Journal.</em></h1>
+      <p>Capture what you taste while it’s fresh. Tap a few impressions, add your own thoughts, and build a record of your palate over time.</p>
+      <div class="journal-stats"><div><strong id="journal-total">0</strong><span>wines tried</span></div><div><strong id="journal-average">—</strong><span>average rating</span></div></div>
+    </section>
+
+    <section class="journal-workspace">
+      <form id="full-tasting-form" class="journal-form">
+        <div class="journal-form-heading"><p class="eyebrow"><span></span> New entry</p><h2>What did you try?</h2></div>
+        <label><span>Wine name</span><input name="wine_name" list="saved-wine-options" required maxlength="200" placeholder="Start typing a wine…"></label>
+        <datalist id="saved-wine-options"></datalist>
+        <div class="journal-form-grid">
+          <label><span>Your rating</span><select name="rating" required><option value="">Choose a rating</option><option value="5">★★★★★ — Loved it</option><option value="4">★★★★☆ — Really liked it</option><option value="3">★★★☆☆ — Enjoyed it</option><option value="2">★★☆☆☆ — Not for me</option><option value="1">★☆☆☆☆ — Disliked it</option></select></label>
+          <label><span>Date tried</span><input name="date_tried" type="date" required></label>
+        </div>
+
+        <fieldset class="attribute-group"><legend>Sweetness</legend><div class="attribute-options"><button type="button" data-attribute="Bone dry">Bone dry</button><button type="button" data-attribute="Dry">Dry</button><button type="button" data-attribute="Off-dry">Off-dry</button><button type="button" data-attribute="Sweet">Sweet</button><button type="button" data-attribute="Too sweet">Too sweet</button></div></fieldset>
+        <fieldset class="attribute-group"><legend>Body & texture</legend><div class="attribute-options"><button type="button" data-attribute="Light">Light</button><button type="button" data-attribute="Smooth">Smooth</button><button type="button" data-attribute="Full-bodied">Full-bodied</button><button type="button" data-attribute="Creamy">Creamy</button><button type="button" data-attribute="Tannic">Tannic</button><button type="button" data-attribute="Crisp">Crisp</button></div></fieldset>
+        <fieldset class="attribute-group"><legend>Flavors noticed</legend><div class="attribute-options"><button type="button" data-attribute="Fruity">Fruity</button><button type="button" data-attribute="Citrus">Citrus</button><button type="button" data-attribute="Berry">Berry</button><button type="button" data-attribute="Floral">Floral</button><button type="button" data-attribute="Earthy">Earthy</button><button type="button" data-attribute="Spicy">Spicy</button><button type="button" data-attribute="Oaky">Oaky</button><button type="button" data-attribute="Vanilla">Vanilla</button><button type="button" data-attribute="Mineral">Mineral</button><button type="button" data-attribute="Smoky">Smoky</button></div></fieldset>
+        <fieldset class="attribute-group"><legend>Quick impression</legend><div class="attribute-options"><button type="button" data-attribute="Would buy again">Would buy again</button><button type="button" data-attribute="Great value">Great value</button><button type="button" data-attribute="Food-friendly">Food-friendly</button><button type="button" data-attribute="Special occasion">Special occasion</button><button type="button" data-attribute="Not my style">Not my style</button></div></fieldset>
+
+        <label><span>Anything else?</span><textarea name="notes" maxlength="1000" placeholder="Add aromas, finish, food pairing, who you shared it with, or anything you want to remember…"></textarea></label>
+        <button class="button button-gold journal-submit" type="submit">Save to my journal <span>→</span></button>
+      </form>
+
+      <section class="journal-history">
+        <div class="journal-history-heading"><div><p class="eyebrow"><span></span> Your tastings</p><h2>Past notes</h2></div><select id="journal-filter" aria-label="Filter tasting journal"><option value="all">All ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></div>
+        <div id="journal-entries"></div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

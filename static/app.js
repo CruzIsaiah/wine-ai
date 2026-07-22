@@ -110,6 +110,7 @@ function renderTastingJournal() {
       <h3>${escapeHtml(entry.wine_name)}</h3>
       <span class="tasting-stars">${"★".repeat(entry.rating)}${"☆".repeat(5 - entry.rating)}</span>
       <span class="tasting-date">${escapeHtml(entry.date_tried)}</span>
+      ${entry.attributes?.length ? `<div class="entry-attributes">${entry.attributes.map((attribute) => `<span>${escapeHtml(attribute)}</span>`).join("")}</div>` : ""}
       ${entry.notes ? `<p>${escapeHtml(entry.notes)}</p>` : ""}
       <button class="delete-tasting" data-tasting-index="${index}" aria-label="Delete tasting note for ${escapeHtml(entry.wine_name)}">×</button>
     </article>

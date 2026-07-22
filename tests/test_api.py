@@ -83,6 +83,13 @@ def test_api_responses_include_rate_limit_headers():
     assert int(response.headers["X-RateLimit-Remaining"]) >= 0
 
 
+def test_journal_page_is_available():
+    response = client.get("/journal")
+
+    assert response.status_code == 200
+    assert "Tasting Journal" in response.text
+
+
 def test_preferences_endpoint_returns_json_safe_results():
     response = client.post(
         "/recommend/preferences",
