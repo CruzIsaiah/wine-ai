@@ -10,6 +10,10 @@ venv/
 .env
 .env.*
 
+# --- Local Project Guides ---
+docs/PROJECT_GUIDE.md
+docs/PRESENTATION_GUIDE.md
+
 # --- Data Files ---
 data/
 *.csv

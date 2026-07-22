@@ -2,13 +2,6 @@
 
 WinePair AI is a grounded virtual sommelier powered by Google ADK and Gemini 3.6 Flash. It combines a deterministic TF-IDF recommendation engine, a validated FastAPI service, and grounded search for wines outside the local catalog.
 
-## Documentation
-
-- [Complete project and architecture guide](docs/PROJECT_GUIDE.md)
-- [Presentation outline and talk track](docs/PRESENTATION_GUIDE.md)
-
----
-
 ## 🚀 Features
 - 🧠 **Content-based recommender** using TF-IDF + cosine similarity (`pandas`, `scikit-learn`)
 - 🤖 **Conversational manager** built with Google ADK and Gemini
