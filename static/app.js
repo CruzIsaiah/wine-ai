@@ -30,9 +30,9 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function scoreLabel(score) {
-  if (typeof score !== "number") return "Great match";
-  return `${Math.max(1, Math.round(score * 100))}% match`;
+function scoreLabel(score, bestScore) {
+  if (typeof score !== "number" || bestScore <= 0) return "Great match";
+  return `${Math.max(1, Math.round((score / bestScore) * 100))}% relative match`;
 }
 
 function renderWines(wines, body) {
@@ -46,6 +46,7 @@ function renderWines(wines, body) {
     resultsGrid.innerHTML = '<div class="empty-state"><strong>No exact matches yet.</strong><br>Try broadening the region or choosing “Surprise me.”</div>';
     return;
   }
+  const bestScore = Math.max(...wines.map((wine) => Number(wine.similarity_score) || 0));
   resultsGrid.innerHTML = wines.map((wine, index) => `
     <article class="wine-card">
       <span class="card-rank">No. ${String(index + 1).padStart(2, "0")}</span>
@@ -55,7 +56,7 @@ function renderWines(wines, body) {
       <p class="wine-meta">${escapeHtml([wine.Region, wine.Country].filter(Boolean).join(", ") || "Selected region")}</p>
       <div class="card-bottom">
         <span class="price">${escapeHtml(wine.Price || "Price varies")}</span>
-        <span class="score">${scoreLabel(wine.similarity_score)}</span>
+        <span class="score">${scoreLabel(wine.similarity_score, bestScore)}</span>
       </div>
     </article>
   `).join("");
