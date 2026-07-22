@@ -2,12 +2,6 @@
 
 WinePair AI is a personalized wine discovery and tasting-journal application powered by Google ADK, Gemini, FastAPI, and a deterministic recommendation engine. It helps users discover wines, chat with a virtual sommelier, save bottles, and build a record of their personal taste.
 
-## Demo
-
-[![Watch the WinePair AI product demo](docs/demo/winepair-demo-poster.jpg)](docs/demo/winepair-demo.mp4)
-
-[▶ Watch the full MP4 demo](docs/demo/winepair-demo.mp4) — guided recommendations, wine details, saved lists, tasting journal, and AI sommelier chat.
-
 ## Current Experience
 
 ### Personalized Recommendations
