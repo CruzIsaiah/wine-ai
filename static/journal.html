@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/journal.css">
-  <script src="/static/journal.js?v=1" defer></script>
+  <script src="/static/journal.js?v=2" defer></script>
 </head>
 <body class="journal-page">
   <header class="journal-header">
@@ -27,7 +27,9 @@
 
     <section class="journal-workspace">
       <form id="full-tasting-form" class="journal-form">
-        <div class="journal-form-heading"><p class="eyebrow"><span></span> New entry</p><h2>What did you try?</h2></div>
+        <input type="hidden" name="source_title">
+        <input type="hidden" name="editing_index">
+        <div class="journal-form-heading"><p id="journal-form-eyebrow" class="eyebrow"><span></span> New entry</p><h2 id="journal-form-title">What did you try?</h2></div>
         <label><span>Wine name</span><input name="wine_name" list="saved-wine-options" required maxlength="200" placeholder="Start typing a wine…"></label>
         <datalist id="saved-wine-options"></datalist>
         <div class="journal-form-grid">
@@ -41,10 +43,15 @@
         <fieldset class="attribute-group"><legend>Quick impression</legend><div class="attribute-options"><button type="button" data-attribute="Would buy again">Would buy again</button><button type="button" data-attribute="Great value">Great value</button><button type="button" data-attribute="Food-friendly">Food-friendly</button><button type="button" data-attribute="Special occasion">Special occasion</button><button type="button" data-attribute="Not my style">Not my style</button></div></fieldset>
 
         <label><span>Anything else?</span><textarea name="notes" maxlength="1000" placeholder="Add aromas, finish, food pairing, who you shared it with, or anything you want to remember…"></textarea></label>
-        <button class="button button-gold journal-submit" type="submit">Save to my journal <span>→</span></button>
+        <button id="journal-submit" class="button button-gold journal-submit" type="submit">Save to my journal <span>→</span></button>
+        <button id="cancel-edit" class="cancel-edit" type="button" hidden>Cancel editing</button>
       </form>
 
       <section class="journal-history">
+        <div class="rate-from-list">
+          <div class="journal-history-heading"><div><p class="eyebrow"><span></span> Ready to review</p><h2>From My List</h2></div></div>
+          <div id="saved-to-rate"></div>
+        </div>
         <div class="journal-history-heading"><div><p class="eyebrow"><span></span> Your tastings</p><h2>Past notes</h2></div><select id="journal-filter" aria-label="Filter tasting journal"><option value="all">All ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></div>
         <div id="journal-entries"></div>
       </section>
