@@ -3,6 +3,13 @@ import pytest
 from recommender.recommender import WineRecommender
 
 
+def test_default_recommender_uses_active_catalog():
+    recommender = WineRecommender()
+
+    assert recommender.wine_df["Title"].iloc[0].startswith("Cooper's Hawk")
+    assert all("Cooper's Hawk" in title for title in recommender.wine_df["Title"].head(3))
+
+
 @pytest.fixture(scope="module")
 def recommender():
     return WineRecommender("data/wine_data.csv")

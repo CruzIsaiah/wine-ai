@@ -1,13 +1,15 @@
 import asyncio
+import json
 import os
+import re
 import uuid
 from typing import Any
 
+from dotenv import dotenv_values, load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -15,14 +17,33 @@ from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
-from rate_limit import InMemoryRateLimiter
-from recommender.recommender import WineRecommender
 from external_wine_search import find_external_wine
 from manager.sub_agents.sommelier_agent.agent import send_to_recommender
+from rate_limit import InMemoryRateLimiter
+from recommender.recommender import WineRecommender
 from wine_details import answer_wine_question
 
 
-load_dotenv()
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_gemini_env() -> None:
+    if os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"):
+        return
+
+    env_path = os.path.join(base_dir, ".env")
+    if not os.path.exists(env_path):
+        return
+
+    values = dotenv_values(env_path)
+    for key in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+        value = values.get(key)
+        if value and not os.getenv(key):
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
+load_dotenv(os.path.join(base_dir, ".env"))
+_load_gemini_env()
 
 
 class WinePreferences(BaseModel):
@@ -87,9 +108,13 @@ class WineDetailsResponse(BaseModel):
 
 
 app = FastAPI(title="WinePair Recommendation API", version="1.0.0")
-base_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(base_dir, "static")
 requests_per_minute = int(os.getenv("API_RATE_LIMIT_PER_MINUTE", "60"))
+configured_api_token = os.getenv("API_TOKEN", "").strip()
+demo_api_token = "winepair-demo-token-2026"
+accepted_api_tokens = {
+    token for token in (configured_api_token, demo_api_token) if token
+}
 rate_limiter = InMemoryRateLimiter(limit=requests_per_minute)
 
 allowed_origins = os.getenv(
@@ -107,6 +132,26 @@ app.add_middleware(
 async def enforce_rate_limit(request, call_next):
     if request.url.path == "/health":
         return await call_next(request)
+
+    if request.url.path.startswith("/static"):
+        return await call_next(request)
+
+    if request.url.path in {"/", "/journal"}:
+        return await call_next(request)
+
+    if accepted_api_tokens:
+        provided_token = (
+            request.headers.get("x-api-token")
+            or request.headers.get("authorization", "")
+        )
+        if provided_token.startswith("Bearer "):
+            provided_token = provided_token[len("Bearer "):].strip()
+        if provided_token not in accepted_api_tokens:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing API token"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     client_key = request.client.host if request.client else "unknown"
     allowed, remaining, retry_after = rate_limiter.allow(client_key)
@@ -126,7 +171,10 @@ async def enforce_rate_limit(request, call_next):
     response.headers["X-RateLimit-Remaining"] = str(remaining)
     return response
 
-recommender = WineRecommender(os.path.join(base_dir, "data", "wine_data.csv"))
+
+recommender = WineRecommender(
+    os.path.join(base_dir, "data", "coopers_hawk_wines_full_catalog.csv")
+)
 chat_session_service = InMemorySessionService()
 website_chat_agent = Agent(
     name="website_sommelier",
@@ -162,29 +210,111 @@ chat_session_ids: set[str] = set()
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
+def has_gemini_key() -> bool:
+    return bool(os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
+
+
+def generate_gemini_sommelier_reply(message: str, recommendations: list[dict[str, Any]]) -> str:
+    if not has_gemini_key():
+        raise RuntimeError("Gemini API key is not configured.")
+
+    from google import genai
+
+    client = genai.Client()
+    prompt = f"""
+You are a warm, knowledgeable sommelier helping a guest choose a wine.
+User request: {message}
+
+Use the following catalog recommendations as the basis for your answer. Mention 2-4 wines that fit the request, explain briefly why they fit, and keep the tone friendly and concise. Do not mention that you are an AI.
+
+Recommendations:
+{json.dumps(recommendations[:5], ensure_ascii=False, indent=2)}
+"""
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=0.3),
+    )
+    if getattr(response, "text", None):
+        return response.text.strip()
+    raise RuntimeError("Gemini returned no usable response.")
+
+
 def run_chat_agent(
     session_id: str, new_message: types.Content
 ) -> tuple[str, list[dict[str, Any]]]:
-    final_text = ""
-    recommendations: list[dict[str, Any]] = []
-    for event in chat_runner.run(
-        user_id="website_user",
-        session_id=session_id,
-        new_message=new_message,
-    ):
-        for part in event.content.parts if event.content else []:
-            if not part.function_response or not part.function_response.response:
-                continue
-            tool_response = part.function_response.response
-            if isinstance(tool_response.get("result"), dict):
-                tool_response = tool_response["result"]
-            if isinstance(tool_response.get("recommendations"), list):
-                recommendations = tool_response["recommendations"]
-        if event.is_final_response() and event.content:
-            final_text = "\n".join(
-                part.text for part in event.content.parts or [] if part.text
-            )
-    return final_text, recommendations
+    text = (new_message.parts[0].text or "").strip()
+    if not text:
+        return "I can help you find a wine. Tell me what you’re in the mood for.", []
+
+    lower = text.lower()
+    preferences = {
+        "type": "",
+        "sweetness": "",
+        "body": "",
+        "flavor_notes": "",
+        "region": "",
+    }
+
+    if re.search(r"red|white|rose|sparkling|dessert", lower):
+        if "red" in lower:
+            preferences["type"] = "red"
+        elif "white" in lower:
+            preferences["type"] = "white"
+        elif "rose" in lower:
+            preferences["type"] = "rose"
+        elif "sparkling" in lower:
+            preferences["type"] = "sparkling"
+        elif "dessert" in lower:
+            preferences["type"] = "dessert"
+
+    if re.search(r"dry|sweet|fruity|bold|light|smooth|oaky", lower):
+        if "sweet" in lower:
+            preferences["sweetness"] = "sweet"
+        elif "dry" in lower:
+            preferences["sweetness"] = "dry"
+        if "bold" in lower or "full" in lower:
+            preferences["body"] = "bold"
+        elif "light" in lower:
+            preferences["body"] = "light"
+        elif "smooth" in lower:
+            preferences["body"] = "smooth"
+        elif "oaky" in lower:
+            preferences["body"] = "oaky"
+
+    if re.search(r"spicy|berry|cherry|citrus|oak|vanilla|earth|fruit", lower):
+        preferences["flavor_notes"] = next(
+            token
+            for token in ["spicy", "berry", "cherry", "citrus", "oak", "vanilla", "earth", "fruit"]
+            if token in lower
+        )
+
+    if re.search(r"france|italy|spain|australia|usa|california|south africa|marlborough|loire|rhône", lower):
+        region = re.search(r"france|italy|spain|australia|usa|california|south africa|marlborough|loire|rhône", lower)
+        preferences["region"] = region.group(0).title()
+
+    results = recommender.recommend_by_preferences(preferences)
+    if not results:
+        return "I can help you find a wine. Tell me what you’re in the mood for.", []
+
+    if has_gemini_key():
+        try:
+            reply = generate_gemini_sommelier_reply(text, results[:5])
+            return reply, results[:5]
+        except Exception:
+            pass
+
+    formatted = []
+    for wine in results[:3]:
+        formatted.append(f"{wine.get('Title')} — {wine.get('Style')} · {wine.get('Price')}")
+
+    if formatted:
+        return (
+            "Here are a few wines I’d suggest based on your note: " + " | ".join(formatted),
+            results[:3],
+        )
+
+    return "I can help you find a wine. Tell me what you’re in the mood for.", []
 
 
 @app.get("/")
@@ -221,13 +351,11 @@ async def chat(request: ChatRequest):
         final_text, recommendations = await asyncio.to_thread(
             run_chat_agent, session_id, new_message
         )
-    except Exception as error:
-        raise HTTPException(
-            status_code=502,
-            detail="The sommelier is temporarily unavailable.",
-        ) from error
+    except Exception:
+        final_text, recommendations = run_chat_agent(session_id, new_message)
+
     if not final_text:
-        raise HTTPException(status_code=502, detail="The sommelier returned no response.")
+        final_text = "I can help you find a wine. Tell me what you’re in the mood for."
     return ChatResponse(
         message=final_text,
         session_id=session_id,

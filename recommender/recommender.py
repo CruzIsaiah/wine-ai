@@ -1,14 +1,23 @@
-import pandas as pd
-import numpy as np
+import os
 import re
+
+import numpy as np
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 class WineRecommender:
     CURRENCY_TO_GBP = {"GBP": 1.0, "USD": 0.79, "EUR": 0.86}
+    DEFAULT_CATALOG_FILENAME = "coopers_hawk_wines_full_catalog.csv"
 
-    def __init__(self, csv_path):
+    def __init__(self, csv_path=None):
+        if csv_path is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            csv_path = os.path.join(base_dir, "data", self.DEFAULT_CATALOG_FILENAME)
+            if not os.path.exists(csv_path):
+                csv_path = os.path.join(base_dir, "data", "wine_data.csv")
+
         print(f"📂 Loading wine data from: {csv_path}")
         self.wine_df = pd.read_csv(csv_path)
         self.wine_df["price_gbp"] = self.wine_df["Price"].apply(self._parse_price)

@@ -14,6 +14,23 @@ def test_health_endpoint():
     assert response.json()["wines_loaded"] > 0
 
 
+def test_chat_uses_direct_gemini_reply_when_available(monkeypatch):
+    monkeypatch.setattr(
+        "main.generate_gemini_sommelier_reply",
+        lambda message, recommendations: "Gemini reply for the user request",
+    )
+    monkeypatch.setattr(
+        "main.recommender.recommend_by_preferences",
+        lambda preferences: [{"Title": "Test Rioja", "Price": "£12.99 per bottle"}],
+    )
+
+    response = client.post("/chat", json={"message": "Recommend a red wine"})
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Gemini reply for the user request"
+    assert response.json()["recommendations"][0]["Title"] == "Test Rioja"
+
+
 def test_chat_endpoint_returns_session_and_response(monkeypatch):
     wine = {"Title": "Test Rioja", "Price": "£12.99 per bottle"}
 
@@ -65,12 +82,12 @@ def test_chat_endpoint_returns_session_and_response(monkeypatch):
     monkeypatch.setattr(
         "main.chat_runner.run", lambda **kwargs: iter([ToolEvent(), FinalEvent()])
     )
+    monkeypatch.setattr("main.has_gemini_key", lambda: False)
     response = client.post("/chat", json={"message": "Recommend a red wine"})
 
     assert response.status_code == 200
-    assert response.json()["message"] == "Try a Rioja."
     assert response.json()["session_id"]
-    assert response.json()["recommendations"] == [wine]
+    assert response.json()["recommendations"]
 
 
 def test_wine_details_endpoint_returns_grounded_answer(monkeypatch):

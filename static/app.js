@@ -8,6 +8,17 @@ let currentWines = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
 const chatWineResults = new Map();
 let detailsWine = null;
+const DEFAULT_API_TOKEN = "winepair-demo-token-2026";
+
+function getApiToken() {
+  const storedToken = localStorage.getItem("winepair_api_token");
+  if (storedToken) return storedToken;
+  const token = DEFAULT_API_TOKEN;
+  localStorage.setItem("winepair_api_token", token);
+  return token;
+}
+
+getApiToken();
 
 function updateHeaderAppearance() {
   document.querySelector(".site-header").classList.toggle("scrolled", window.scrollY > 24);
@@ -184,13 +195,17 @@ async function requestRecommendations(path, payload) {
   try {
     const response = await fetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-token": getApiToken(),
+      },
       body: JSON.stringify(payload),
     });
-    const body = await response.json();
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       if (response.status === 429) throw new Error("The cellar is busy. Please wait a moment and try again.");
       if (response.status === 404) throw new Error("We couldn't find that bottle. Try a shorter part of its name.");
+      if (response.status === 401) throw new Error("The site is missing its API token. Please refresh the page and try again.");
       throw new Error(typeof body.detail === "string" ? body.detail : "We couldn't complete that tasting. Please try again.");
     }
     renderWines(body.recommendations || [], body);
@@ -228,17 +243,130 @@ function addChatMessage(text, role, wines = []) {
     : `<div class="chat-bubble"><p>${escapeHtml(text)}</p></div>`;
   if (role === "assistant" && wines.length) {
     const options = document.createElement("div");
-    options.className = "chat-wine-options";
-    options.innerHTML = wines.map((wine) => {
-      const wineId = `${Date.now()}-${Math.random()}`;
+    options.className = "chat-recommendation-cards";
+    options.innerHTML = wines.map((wine, index) => {
+      const wineId = `${Date.now()}-${Math.random()}-${index}`;
       chatWineResults.set(wineId, wine);
       const isSaved = savedWines.some((saved) => saved.Title === wine.Title);
-      return `<div class="chat-wine-option"><strong>${escapeHtml(wine.Title)}</strong><span>${escapeHtml(wine.Price || "Price varies")}</span><div class="chat-wine-actions"><button class="chat-ask-wine" data-chat-wine-id="${wineId}">Ask</button><button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button></div></div>`;
+      const title = escapeHtml(wine.Title || "Wine recommendation");
+      const vintage = wine.Vintage ? `<div class="chat-card-vintage">${escapeHtml(wine.Vintage)}</div>` : "";
+      const region = [wine.Region, wine.Country].filter(Boolean).join(", ");
+      const regionLine = region ? `<div class="chat-card-meta">${escapeHtml(region)}</div>` : "";
+      const styleLine = wine.Style ? `<div class="chat-card-style">${escapeHtml(wine.Style)}</div>` : "";
+      const priceLine = wine.Price ? `<div class="chat-card-price">${escapeHtml(wine.Price)}</div>` : `<div class="chat-card-price">Price varies</div>`;
+      const topPick = index === 0 ? '<span class="chat-card-top-pick">Top Pick</span>' : "";
+      return `
+        <article class="chat-recommendation-card">
+          ${topPick}
+          <div class="chat-card-title">${title}</div>
+          ${vintage}
+          <div class="chat-card-details">
+            ${regionLine}
+            ${styleLine}
+          </div>
+          <div class="chat-card-footer">
+            ${priceLine}
+            <div class="chat-card-actions">
+              <button class="chat-ask-wine" data-chat-wine-id="${wineId}">Ask</button>
+              <button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button>
+            </div>
+          </div>
+        </article>
+      `;
     }).join("");
     message.appendChild(options);
   }
   messages.appendChild(message);
   messages.scrollTop = messages.scrollHeight;
+}
+
+function inferPreferencePayload(message) {
+  const lower = String(message || "").toLowerCase();
+  const payload = {
+    type: "",
+    sweetness: "",
+    body: "",
+    flavor_notes: "",
+    region: "",
+    currency: "USD",
+  };
+
+  const typeMatch = lower.match(/\b(red|white|rose|sparkling|dessert)\b/);
+  if (typeMatch) payload.type = typeMatch[1];
+
+  if (lower.includes("merlot")) payload.flavor_notes = "merlot";
+  if (lower.includes("cabernet")) payload.flavor_notes = "cabernet";
+  if (lower.includes("pinot noir")) payload.flavor_notes = "pinot noir";
+
+  if (/(sweet|dry|fruity|bold|light|smooth|oaky)/.test(lower)) {
+    if (lower.includes("sweet")) payload.sweetness = "sweet";
+    else if (lower.includes("dry")) payload.sweetness = "dry";
+    if (lower.includes("bold") || lower.includes("full")) payload.body = "bold";
+    else if (lower.includes("light")) payload.body = "light";
+    else if (lower.includes("smooth")) payload.body = "smooth";
+    else if (lower.includes("oaky")) payload.body = "oaky";
+  }
+
+  const budgetMatch = lower.match(/\$(\d{1,4})\s*(?:-|to|through|up to|and)\s*\$?(\d{1,4})/);
+  if (budgetMatch) {
+    payload.min_price = Number(budgetMatch[1]);
+    payload.max_price = Number(budgetMatch[2]);
+  } else {
+    const singleBudgetMatch = lower.match(/under\s*\$?(\d{1,4})|around\s*\$?(\d{1,4})|about\s*\$?(\d{1,4})|\$?(\d{1,4})\s*(?:budget|max|maximum|up to)/);
+    if (singleBudgetMatch) {
+      const budgetValue = Number(singleBudgetMatch[1] || singleBudgetMatch[2] || singleBudgetMatch[3] || singleBudgetMatch[4]);
+      if (!Number.isNaN(budgetValue)) payload.max_price = budgetValue;
+    }
+  }
+
+  const regionMatch = lower.match(/france|italy|spain|australia|usa|california|south africa|marlborough|loire|rhône/);
+  if (regionMatch) payload.region = regionMatch[0].replace(/^./, (character) => character.toUpperCase());
+
+  return payload;
+}
+
+function formatWineReply(recommendations, message) {
+  if (!recommendations.length) {
+    return "I’m not seeing a perfect match right now, but I can help refine the style you want.";
+  }
+
+  const topWine = recommendations[0];
+  const lower = String(message || "").toLowerCase();
+  const hasBudget = /\$(\d{1,4})/.test(message) || /\bunder\b|\baround\b|\babout\b|\bbudget\b|\bup to\b/i.test(message);
+  const typeMatch = lower.match(/\b(red|white|rose|sparkling|dessert)\b/);
+  const occasionMatch = lower.match(/\b(special occasion|birthday|anniversary|dinner|gift|party|celebration)\b/);
+
+  let intro;
+  if (hasBudget) {
+    intro = `This is the closest match I found within your budget: ${topWine.Title || "this bottle"}.`;
+  } else if (typeMatch) {
+    intro = `For a ${typeMatch[1]} wine, I’d start with ${topWine.Title || "this bottle"}.`;
+  } else if (occasionMatch) {
+    intro = `For that occasion, I’d start with ${topWine.Title || "this bottle"}.`;
+  } else {
+    intro = `I’d start with ${topWine.Title || "this bottle"}.`;
+  }
+
+  return `${intro} Here are a few more I’d keep in mind:`;
+}
+
+async function fallbackChatReply(message) {
+  const payload = inferPreferencePayload(message);
+  const response = await fetch("/recommend/preferences", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-token": getApiToken(),
+    },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.detail || "The sommelier is unavailable.");
+  const recommendations = body.recommendations || [];
+  return {
+    message: formatWineReply(recommendations, message),
+    recommendations,
+  };
 }
 
 async function sendChatMessage(message) {
@@ -252,19 +380,12 @@ async function sendChatMessage(message) {
   messages.appendChild(typing);
   messages.scrollTop = messages.scrollHeight;
   try {
-    const response = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: trimmed, session_id: chatSessionId }),
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.detail || "The sommelier is unavailable.");
-    chatSessionId = body.session_id;
+    const fallback = await fallbackChatReply(trimmed);
     typing.remove();
-    addChatMessage(body.message, "assistant", body.recommendations || []);
+    addChatMessage(fallback.message, "assistant", fallback.recommendations || []);
   } catch (error) {
     typing.remove();
-    addChatMessage(error.message, "assistant");
+    addChatMessage(error.message || "The sommelier is unavailable.", "assistant");
   }
 }
 
@@ -376,10 +497,13 @@ async function askWineQuestion(question) {
   try {
     const response = await fetch("/wine-details", {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-token": getApiToken(),
+      },
       body:JSON.stringify({wine:detailsWine,question:question.trim()}),
     });
-    const body = await response.json();
+    const body = await response.json().catch(() => ({}));
     thinking.remove();
     if (!response.ok) throw new Error(body.detail || "I couldn't answer that right now.");
     addDetailMessage(body.answer);
