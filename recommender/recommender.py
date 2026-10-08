@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 class WineRecommender:
     CURRENCY_TO_GBP = {"GBP": 1.0, "USD": 0.79, "EUR": 0.86}
-    DEFAULT_CATALOG_FILENAME = "coopers_hawk_wines_full_catalog.csv"
+    DEFAULT_CATALOG_FILENAME = "wine_pair_expanded_catalog_184_wines_2026-10-08.csv"
 
     def __init__(self, csv_path=None):
         if csv_path is None:
@@ -28,6 +28,10 @@ class WineRecommender:
             | self.wine_df["Price"].fillna("").str.contains(
                 "per case", case=False, regex=False
             )
+        )
+        self.wine_df["recommendation_enabled"] = (
+            self.wine_df["RecommendationEnabled"].fillna(True).astype(str).str.casefold().eq("true")
+            if "RecommendationEnabled" in self.wine_df else True
         )
 
         # Weighted descriptive fields
@@ -97,7 +101,8 @@ class WineRecommender:
         ]).lower()
         min_price = prefs.get("min_price")
         max_price = prefs.get("max_price")
-        if not query_text.strip() and min_price is None and max_price is None:
+        excluded_producers = prefs.get("excluded_producers") or []
+        if not query_text.strip() and min_price is None and max_price is None and not excluded_producers:
             raise ValueError("At least one wine preference is required.")
 
         query_vec = self.vectorizer.transform([query_text])
@@ -107,7 +112,16 @@ class WineRecommender:
             similarity_scores, nan=0.0, posinf=0.0, neginf=0.0
         )
 
-        candidate_mask = ~self.wine_df["is_case_product"]
+        candidate_mask = ~self.wine_df["is_case_product"] & self.wine_df["recommendation_enabled"]
+        # Catalog titles include producer names. Normalize punctuation so straight
+        # and curly apostrophes (or omitted apostrophes) match the same producer.
+        normalized_titles = self.wine_df["Title"].fillna("").map(
+            lambda title: re.sub(r"[^\w]", "", title.casefold())
+        )
+        for producer in excluded_producers:
+            normalized = re.sub(r"[^\w]", "", producer.casefold())
+            if normalized:
+                candidate_mask &= ~normalized_titles.str.contains(normalized, regex=False)
         wine_type = prefs.get("type", "").strip().lower().replace(" wine", "")
         if wine_type and wine_type != "any":
             candidate_mask &= self.wine_df["Type"].fillna("").str.contains(
@@ -158,9 +172,11 @@ class WineRecommender:
         similarity_scores = cosine_similarity(
             self.tfidf_matrix[selected_index], self.tfidf_matrix
         )[0]
-        similarity_scores[selected_index] = -1
-        similarity_scores[self.wine_df["is_case_product"].to_numpy()] = -1
-        top_indices = similarity_scores.argsort()[::-1][:5]
+        eligible = self.wine_df.index[
+            ~self.wine_df["is_case_product"] & self.wine_df["recommendation_enabled"]
+            & (self.wine_df.index != selected_index)
+        ].to_numpy()
+        top_indices = eligible[similarity_scores[eligible].argsort()[::-1]][:5]
         return self._serialize_results(top_indices, similarity_scores)
 
     # ------------------------------
@@ -214,6 +230,7 @@ class WineRecommender:
         eligible_indices = self.wine_df.index[
             ~self.wine_df["Title"].isin(rated_wines.keys())
             & ~self.wine_df["is_case_product"]
+            & self.wine_df["recommendation_enabled"]
         ].to_numpy()
         ranked_indices = eligible_indices[
             similarity_scores[eligible_indices].argsort()[::-1]

@@ -6,13 +6,30 @@ from recommender.recommender import WineRecommender
 def test_default_recommender_uses_active_catalog():
     recommender = WineRecommender()
 
-    assert recommender.wine_df["Title"].iloc[0].startswith("Cooper's Hawk")
-    assert all("Cooper's Hawk" in title for title in recommender.wine_df["Title"].head(3))
+    assert len(recommender.wine_df) == 184
+    titles = recommender.wine_df["Title"]
+    assert titles.str.contains("Cooper's Hawk", regex=False).any()
+    assert (~titles.str.contains("Cooper's Hawk", regex=False)).any()
 
 
 @pytest.fixture(scope="module")
 def recommender():
     return WineRecommender("data/wine_data.csv")
+
+
+def test_disabled_catalog_wines_are_never_recommended():
+    engine = WineRecommender()
+    disabled = set(engine.wine_df.loc[~engine.wine_df["recommendation_enabled"], "Title"])
+    assert disabled
+    reference = next(iter(disabled))
+    results = [
+        engine.recommend_by_preferences({"type": "white"}),
+        engine.recommend_by_title(reference),
+        engine.recommend_by_user_ratings({reference: 5}),
+    ]
+    for wines in results:
+        assert wines
+        assert not disabled.intersection(wine["Title"] for wine in wines)
 
 
 def test_preferences_enforce_type_and_country(recommender):

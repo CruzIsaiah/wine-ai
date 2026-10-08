@@ -20,6 +20,7 @@ data/*
 *.xlsx
 *.json
 !data/coopers_hawk_wines_full_catalog.csv
+!data/wine_pair_expanded_catalog_184_wines_2026-10-08.csv
 !data/wine_data.csv
 !vercel.json
 

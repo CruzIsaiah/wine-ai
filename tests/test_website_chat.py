@@ -12,6 +12,26 @@ import main
 client = TestClient(main.app, headers={"x-api-token": main.demo_api_token})
 
 
+def test_website_uses_expanded_catalog():
+    assert client.get("/health").json()["wines_loaded"] == 184
+    assert main.catalog_wine("Rieslingfreak 2025 No. 55 Riesling") is not None
+
+
+@pytest.mark.parametrize("producer", ["Cooper's Hawk", "Cooper’s Hawk", "coopers hawk"])
+def test_producer_exclusion_refines_engine_results_and_persists(producer):
+    context = SimpleNamespace(state={})
+    asyncio.run(main.recommend_wines({"type": "white", "sweetness": "off-dry"}, context))
+    result = asyncio.run(main.recommend_wines({"excluded_producers": [producer]}, context))
+    assert len(result["recommendations"]) == 5
+    assert all("cooper" not in wine["Title"].lower() for wine in result["recommendations"])
+    assert result["preferences"]["sweetness"] == "off-dry"
+    refined = asyncio.run(main.recommend_wines({"max_price": 20}, context))
+    assert refined["preferences"]["excluded_producers"] == [producer]
+    assert all("cooper" not in wine["Title"].lower() for wine in refined["recommendations"])
+    cleared = asyncio.run(main.recommend_wines({"excluded_producers": []}, context))
+    assert cleared["preferences"]["excluded_producers"] == []
+
+
 def tool_event(result):
     return Event(author="website_sommelier", content=types.Content(
         role="user", parts=[types.Part(function_response=types.FunctionResponse(

@@ -54,6 +54,7 @@ class WinePreferences(BaseModel):
     body: str = Field(default="", max_length=50)
     flavor_notes: str = Field(default="", max_length=200)
     region: str = Field(default="", max_length=100)
+    excluded_producers: list[str] = Field(default_factory=list, max_length=20)
     min_price: float | None = Field(default=None, ge=0, le=10000)
     max_price: float | None = Field(default=None, ge=0, le=10000)
     currency: str = Field(default="USD", pattern="^(GBP|USD|EUR)$")
@@ -207,9 +208,7 @@ async def enforce_rate_limit(request, call_next):
     return response
 
 
-recommender = WineRecommender(
-    os.path.join(base_dir, "data", "coopers_hawk_wines_full_catalog.csv")
-)
+recommender = WineRecommender()
 
 
 def remember_recommendations(wines: list[dict], tool_context: ToolContext) -> None:
@@ -313,7 +312,8 @@ async def recommend_wines(
     """Translate tastes into catalog matches. Only this engine chooses and ranks wines.
 
     preferences accepts type, sweetness, body, flavor_notes, region, min_price,
-    max_price, currency. Send only changed fields for refinements. Use null to
+    max_price, currency, excluded_producers (a list of producer names to exclude).
+    Send only changed fields for refinements. Use [] to clear producer exclusions. Use null to
     clear a price, an empty string to clear a taste, and reset for a new search.
     wine_name optionally identifies a reference bottle to find similar wines.
     """
@@ -377,6 +377,10 @@ website_chat_agent = Agent(
         "recommendation request, call recommend_wines before answering, except journal-based searches "
         "which MUST call recommend_from_journal instead. Never suggest bottles from "
         "your own knowledge. Do not invent wines, prices, regions, scores, or product tasting facts. "
+        "The catalog includes multiple producers. Never infer catalog coverage from earlier results "
+        "or claim it contains only one winery. Search the current catalog for refinements, including "
+        "requests for other wineries. For 'not from' or 'exclude' a producer, pass its name in "
+        "excluded_producers (a list); the engine filters it before ranking. Use [] to clear that filter. "
         "Translate natural language into type, sweetness, body, flavor_notes, region, min_price, "
         "max_price, and currency. Use rosé for rose wine, Spain for Spanish, France for French, etc. "
         "Keep all stated price limits exact. Never invent a price limit or default budget. Only set "
