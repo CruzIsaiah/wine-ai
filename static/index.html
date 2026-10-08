@@ -3,48 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="WinePair AI — personalized wine recommendations powered by machine learning.">
+  <meta name="description" content="WinePair AI — A conversation away from your next favorite bottle. Talk taste, food, and budget with your personal sommelier.">
   <title>WinePair AI — Your personal sommelier</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js?v=12" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=13">
+  <link rel="stylesheet" href="/static/discovery.css?v=15">
+  <script src="/static/personalization.js?v=15" defer></script>
+  <script src="/static/app.js?v=15" defer></script>
 </head>
-<body>
+<body class="discovery-page">
   <header class="site-header">
     <a class="brand" href="#top" aria-label="WinePair home">
       <span class="brand-mark">W</span>
       <span>WinePair</span>
     </a>
     <nav aria-label="Main navigation">
-      <a href="#discover">Discover</a>
+      <a href="#finder" class="current-nav">Sommelier</a>
       <a href="#how-it-works">How it works</a>
       <a href="/journal">Journal</a>
       <button id="open-wine-list" class="list-link" type="button">My list <span id="wine-list-count">0</span></button>
-      <a class="nav-cta" href="#finder">Find my wine</a>
+      <a class="nav-cta" href="#finder">Find a bottle ↗</a>
     </nav>
   </header>
 
   <main id="top">
-    <section class="hero" id="discover">
-      <div class="hero-copy">
-        <p class="eyebrow"><span></span> AI-powered wine discovery</p>
-        <h1>Your taste.<br><em>Perfectly paired.</em></h1>
-        <p class="hero-lede">Tell us what you love. Our intelligent sommelier explores hundreds of wines to find bottles made for your palate.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="#finder">Discover your match <span>↗</span></a>
-          <a class="text-link" href="#how-it-works">See how it works <span>↓</span></a>
-        </div>
-        <div class="trust-row">
-          <div><strong>1,000+</strong><span>wines explored</span></div>
-          <div><strong>7</strong><span>taste dimensions</span></div>
-          <div><strong>Instant</strong><span>personal matches</span></div>
-        </div>
-      </div>
-      <div class="hero-visual" aria-hidden="true">
-        <div class="orb orb-one"></div>
-        <div class="orb orb-two"></div>
+    <section class="discovery-layout" id="discover">
+      <div class="discovery-intro">
+        <p class="eyebrow"><span></span> A little guidance. A great bottle.</p>
+        <h1>Good wine.<br> Your taste.<br><em>Let’s talk.</em></h1>
+        <p class="intro-lede">A weeknight dinner. A toast to something big. Or just a flavor you love. Tell your sommelier what you have in mind.</p>
+        <a class="intro-link" href="#chat-input">Find your next favorite <span aria-hidden="true">↗</span></a>
+        <div class="cellar-vignette">
+          <div class="vignette-art" aria-hidden="true">
         <svg class="bottle" viewBox="0 0 210 650" role="img">
           <defs>
             <linearGradient id="glass" x1="0" x2="1"><stop offset="0" stop-color="#351018"/><stop offset=".5" stop-color="#781f31"/><stop offset="1" stop-color="#25090f"/></linearGradient>
@@ -58,28 +50,48 @@
           <text x="105" y="460" text-anchor="middle" fill="#29191a" font-family="serif" font-size="9" letter-spacing="2">CURATED FOR YOU</text>
           <rect x="70" y="0" width="70" height="28" rx="3" fill="#b99a65"/>
         </svg>
-        <div class="match-card">
-          <span class="match-icon">✦</span>
-          <div><small>Your taste match</small><strong>94% compatible</strong></div>
+          </div>
+          <div class="vignette-copy"><p class="eyebrow">Less guesswork, more discovery</p><p>You bring the occasion.<br>We’ll help find the bottle.</p><span>Personal taste. Thoughtful matches.</span></div>
         </div>
-        <p class="vertical-note">CURATED BY INTELLIGENCE · GUIDED BY TASTE</p>
-      </div>
-    </section>
-
-    <section class="finder-section" id="finder">
-      <div class="section-heading">
-        <p class="eyebrow light"><span></span> Your personal tasting room</p>
-        <h2>What are you in the mood for?</h2>
-        <p>Choose a few preferences. There are no wrong answers.</p>
       </div>
 
-      <div class="finder-shell">
-        <div class="finder-tabs" role="tablist">
-          <button class="tab active" data-tab="preferences" role="tab" aria-selected="true">Build my taste profile</button>
-          <button class="tab" data-tab="chat" role="tab" aria-selected="false">Chat with the sommelier</button>
+      <section class="sommelier-workspace" id="finder" aria-labelledby="sommelier-title">
+        <div class="finder-shell">
+          <div class="sommelier-header">
+            <span class="sommelier-mark" aria-hidden="true">W</span>
+            <div><h2 id="sommelier-title">Your sommelier</h2><p>A conversation shaped around you</p></div>
+            <span class="sommelier-badge">WinePair AI</span>
+          </div>
+          <div id="chat-panel" class="chat-panel">
+            <div id="chat-messages" class="chat-messages" role="log" aria-label="Sommelier conversation" aria-live="polite" tabindex="0">
+              <div class="chat-welcome">
+                <span class="welcome-star" aria-hidden="true">✧</span>
+                <h3>What sounds good tonight?</h3>
+                <p>Tell me what you’re eating, a bottle you’ve loved, or your budget. No wine vocabulary needed.</p>
+              </div>
+            </div>
+            <div class="conversation-starters">
+              <p class="starter-label">A little inspiration</p>
+              <div class="chat-suggestions">
+                <button type="button" data-message="A smooth red for a cozy dinner"><span aria-hidden="true">☾</span> A cozy dinner <span aria-hidden="true">↗</span></button>
+                <button type="button" data-message="A slightly sweet white"><span aria-hidden="true">✧</span> Something light & sweet <span aria-hidden="true">↗</span></button>
+                <button type="button" data-message="Find wines based on the bottles I liked in my journal." data-intent="journal"><span aria-hidden="true">♡</span> Like a bottle I love <span aria-hidden="true">↗</span></button>
+                <button type="button" data-message="Help me find a sparkling wine for a celebration"><span aria-hidden="true">✦</span> A reason to celebrate <span aria-hidden="true">↗</span></button>
+              </div>
+            </div>
+            <form id="chat-form" class="chat-input-row">
+              <label class="sr-only" for="chat-input">Message the sommelier</label>
+              <input id="chat-input" name="message" required maxlength="1000" placeholder="A wine for pasta night…" autocomplete="off" aria-describedby="chat-hint">
+              <button type="submit" aria-label="Send message">↑</button>
+            </form>
+            <p id="chat-hint" class="chat-hint">Your words, translated into wines worth discovering.</p>
+          </div>
+          <div class="selection-note"><span aria-hidden="true">✧</span><p>Chosen from our catalog. Matched to your taste.</p></div>
         </div>
-
-        <form id="preferences-form" class="finder-form active" data-panel="preferences">
+        <details id="manual-preferences" class="manual-preferences">
+          <summary><span>Prefer to choose the details yourself?</span><strong>Set preferences <span aria-hidden="true">+</span></strong></summary>
+        <form id="preferences-form" class="finder-form">
+          <p class="preference-intro">Choose your preferences and explore the same wine catalog.</p>
           <div class="field-group full">
             <span class="field-label">Wine type</span>
             <div class="choice-row" data-choice="type">
@@ -96,29 +108,15 @@
             <label><span>Body</span><select name="body"><option value="light">Light & delicate</option><option value="medium" selected>Medium & balanced</option><option value="full">Full & bold</option><option value="any">No preference</option></select></label>
             <label><span>Flavor notes</span><input name="flavor_notes" placeholder="e.g. blackberry, vanilla, earthy" value="fruity, smooth"></label>
             <label><span>Region or country</span><input name="region" placeholder="e.g. France, California, Rioja"></label>
-            <label><span>Minimum price</span><input name="min_price" type="number" min="0" step="1" placeholder="15"></label>
-            <label><span>Maximum price</span><input name="max_price" type="number" min="0" step="1" placeholder="20"></label>
+            <label><span>Minimum price</span><input name="min_price" type="number" min="0" step="1" placeholder="No minimum"></label>
+            <label><span>Maximum price</span><input name="max_price" type="number" min="0" step="1" placeholder="No maximum"></label>
             <label><span>Currency</span><select name="currency"><option value="USD" selected>USD ($)</option><option value="GBP">GBP (£)</option><option value="EUR">EUR (€)</option></select></label>
           </div>
           <button class="button button-gold submit-button" type="submit"><span>Find my wines</span><span class="button-arrow">→</span></button>
         </form>
 
-        <div id="chat-panel" class="finder-form chat-panel" data-panel="chat">
-          <div id="chat-messages" class="chat-messages" aria-live="polite">
-            <div class="chat-message assistant"><span class="chat-avatar">W</span><p>Welcome to WinePair. Tell me what you enjoy, name a wine you love, or share your budget.</p></div>
-          </div>
-          <div class="chat-suggestions">
-            <button type="button">A slightly sweet white under $20</button>
-            <button type="button">Bold Spanish reds for dinner</button>
-            <button type="button">Wines like Josh Cabernet</button>
-          </div>
-          <form id="chat-form" class="chat-input-row">
-            <label class="sr-only" for="chat-input">Message the sommelier</label>
-            <input id="chat-input" name="message" required maxlength="1000" placeholder="Ask your sommelier anything…" autocomplete="off">
-            <button type="submit" aria-label="Send message">→</button>
-          </form>
-        </div>
-      </div>
+        </details>
+      </section>
     </section>
 
     <section class="results-section" id="results" hidden>
@@ -133,13 +131,13 @@
     <section class="how-section" id="how-it-works">
       <div class="how-intro">
         <p class="eyebrow"><span></span> Behind every bottle</p>
-        <h2>Intelligence with<br><em>good taste.</em></h2>
-        <p>WinePair combines natural conversation with transparent machine learning—turning your preferences into recommendations you can understand.</p>
+        <h2>Your taste, translated.<br><em>Your next discovery.</em></h2>
+        <p>The sommelier helps put your taste into words. Our recommendation system does the matching. Together, they make finding your next bottle feel natural.</p>
       </div>
       <div class="steps">
         <article><span>01</span><div class="step-icon">⌁</div><h3>You share your taste</h3><p>Tell us about styles, flavors, regions, or a bottle you already enjoy.</p></article>
-        <article><span>02</span><div class="step-icon">✦</div><h3>Our model finds patterns</h3><p>Weighted TF-IDF and cosine similarity compare your profile across the wine catalog.</p></article>
-        <article><span>03</span><div class="step-icon">◌</div><h3>You discover a match</h3><p>Receive ranked, explainable suggestions—ready to explore, share, and enjoy.</p></article>
+        <article><span>02</span><div class="step-icon">✦</div><h3>We find your matches</h3><p>Our recommendation engine compares your preferences with the catalog and ranks the bottles that fit.</p></article>
+        <article><span>03</span><div class="step-icon">◌</div><h3>You discover a match</h3><p>Your sommelier explains the picks. Ask a question, refine your taste, or save a bottle for later.</p></article>
       </div>
     </section>
   </main>
@@ -176,6 +174,6 @@
     </form>
   </aside>
 
-  <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">W</span><span>WinePair</span></a><p>Thoughtful recommendations. Better bottles.</p><p class="tech-note">Google ADK · Gemini · FastAPI · scikit-learn</p></footer>
+  <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">W</span><span>WinePair</span></a><p>Thoughtful recommendations. Better bottles.</p><p class="tech-note">Good taste starts with curiosity.</p></footer>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Any
 
 from google import genai
@@ -27,7 +28,7 @@ keep each bullet to one sentence, and include only information relevant to the q
 long background section, repeat catalog facts unnecessarily, or recommend other wines unless asked.
 """
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         contents=prompt,
         config=types.GenerateContentConfig(temperature=0.2),
     )

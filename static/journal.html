@@ -8,8 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
-  <link rel="stylesheet" href="/static/journal.css">
-  <script src="/static/journal.js?v=3" defer></script>
+  <link rel="stylesheet" href="/static/journal.css?v=6">
+  <script src="/static/personalization.js?v=15" defer></script>
+  <script src="/static/journal.js?v=5" defer></script>
 </head>
 <body class="journal-page">
   <header class="journal-header">
@@ -33,7 +34,32 @@
         <label><span>Wine name</span><input name="wine_name" list="saved-wine-options" required maxlength="200" placeholder="Start typing a wine…"></label>
         <datalist id="saved-wine-options"></datalist>
         <div class="journal-form-grid">
-          <label><span>Your rating</span><select name="rating" required><option value="">Choose a rating</option><option value="5">★★★★★ — Loved it</option><option value="4">★★★★☆ — Really liked it</option><option value="3">★★★☆☆ — Enjoyed it</option><option value="2">★★☆☆☆ — Not for me</option><option value="1">★☆☆☆☆ — Disliked it</option></select></label>
+          <fieldset class="star-rating" aria-describedby="rating-description">
+            <legend>Your rating</legend>
+            <div class="star-options">
+              <label class="star-option" title="1 star — Disliked it">
+                <input class="rating-input" type="radio" name="rating" value="1" aria-label="1 star — Disliked it">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.3.9-4.55 4.44 1.07 6.26L12 17.35l-5.62 2.95 1.07-6.26L2.9 9.6l6.3-.9Z"/></svg>
+              </label>
+              <label class="star-option" title="2 stars — Not for me">
+                <input class="rating-input" type="radio" name="rating" value="2" aria-label="2 stars — Not for me">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.3.9-4.55 4.44 1.07 6.26L12 17.35l-5.62 2.95 1.07-6.26L2.9 9.6l6.3-.9Z"/></svg>
+              </label>
+              <label class="star-option" title="3 stars — Enjoyed it">
+                <input class="rating-input" type="radio" name="rating" value="3" aria-label="3 stars — Enjoyed it">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.3.9-4.55 4.44 1.07 6.26L12 17.35l-5.62 2.95 1.07-6.26L2.9 9.6l6.3-.9Z"/></svg>
+              </label>
+              <label class="star-option" title="4 stars — Really liked it">
+                <input class="rating-input" type="radio" name="rating" value="4" aria-label="4 stars — Really liked it">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.3.9-4.55 4.44 1.07 6.26L12 17.35l-5.62 2.95 1.07-6.26L2.9 9.6l6.3-.9Z"/></svg>
+              </label>
+              <label class="star-option" title="5 stars — Loved it">
+                <input class="rating-input" type="radio" name="rating" value="5" aria-label="5 stars — Loved it">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.3.9-4.55 4.44 1.07 6.26L12 17.35l-5.62 2.95 1.07-6.26L2.9 9.6l6.3-.9Z"/></svg>
+              </label>
+            </div>
+            <div class="rating-caption"><p id="rating-description" aria-live="polite">Not rated yet</p><button id="clear-rating" class="clear-rating" type="button" hidden>Clear</button></div>
+          </fieldset>
           <label><span>Date tried</span><input name="date_tried" type="date" required></label>
         </div>
 

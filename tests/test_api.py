@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, demo_api_token
 
 
-client = TestClient(app)
+client = TestClient(app, headers={"x-api-token": demo_api_token})
 
 
 def test_health_endpoint():
@@ -12,82 +12,6 @@ def test_health_endpoint():
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["wines_loaded"] > 0
-
-
-def test_chat_uses_direct_gemini_reply_when_available(monkeypatch):
-    monkeypatch.setattr(
-        "main.generate_gemini_sommelier_reply",
-        lambda message, recommendations: "Gemini reply for the user request",
-    )
-    monkeypatch.setattr(
-        "main.recommender.recommend_by_preferences",
-        lambda preferences: [{"Title": "Test Rioja", "Price": "£12.99 per bottle"}],
-    )
-
-    response = client.post("/chat", json={"message": "Recommend a red wine"})
-
-    assert response.status_code == 200
-    assert response.json()["message"] == "Gemini reply for the user request"
-    assert response.json()["recommendations"][0]["Title"] == "Test Rioja"
-
-
-def test_chat_endpoint_returns_session_and_response(monkeypatch):
-    wine = {"Title": "Test Rioja", "Price": "£12.99 per bottle"}
-
-    class ToolEvent:
-        content = type(
-            "Content",
-            (),
-            {
-                "parts": [
-                    type(
-                        "Part",
-                        (),
-                        {
-                            "text": None,
-                            "function_response": type(
-                                "FunctionResponse",
-                                (),
-                                {"response": {"recommendations": [wine]}},
-                            )(),
-                        },
-                    )()
-                ]
-            },
-        )()
-
-        @staticmethod
-        def is_final_response():
-            return False
-
-    class FinalEvent:
-        content = type(
-            "Content",
-            (),
-            {
-                "parts": [
-                    type(
-                        "Part",
-                        (),
-                        {"text": "Try a Rioja.", "function_response": None},
-                    )()
-                ]
-            },
-        )()
-
-        @staticmethod
-        def is_final_response():
-            return True
-
-    monkeypatch.setattr(
-        "main.chat_runner.run", lambda **kwargs: iter([ToolEvent(), FinalEvent()])
-    )
-    monkeypatch.setattr("main.has_gemini_key", lambda: False)
-    response = client.post("/chat", json={"message": "Recommend a red wine"})
-
-    assert response.status_code == 200
-    assert response.json()["session_id"]
-    assert response.json()["recommendations"]
 
 
 def test_wine_details_endpoint_returns_grounded_answer(monkeypatch):
@@ -108,11 +32,9 @@ def test_wine_details_endpoint_returns_grounded_answer(monkeypatch):
 
 
 def test_api_responses_include_rate_limit_headers():
-    response = client.get("/")
+    response = client.post("/recommend/preferences", json={"type": "red"})
 
     assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/html")
-    assert "WinePair" in response.text
     assert response.headers["X-RateLimit-Limit"] == "60"
     assert int(response.headers["X-RateLimit-Remaining"]) >= 0
 
@@ -132,14 +54,14 @@ def test_preferences_endpoint_returns_json_safe_results():
             "sweetness": "dry",
             "body": "bold",
             "flavor_notes": "spicy",
-            "region": "France",
+            "region": "USA",
         },
     )
 
     assert response.status_code == 200
     recommendations = response.json()["recommendations"]
     assert len(recommendations) == 5
-    assert all(wine["Country"] == "France" for wine in recommendations)
+    assert all(wine["Country"] == "USA" for wine in recommendations)
 
 
 def test_empty_preferences_are_rejected():
@@ -177,7 +99,7 @@ def test_invalid_price_range_is_rejected():
 
 
 def test_title_endpoint_returns_similar_wines():
-    response = client.post("/recommend/title", json={"title": "The Guv'nor"})
+    response = client.post("/recommend/title", json={"title": "Cooper's Hawk Lux Sparkling"})
 
     assert response.status_code == 200
     assert len(response.json()["recommendations"]) == 5

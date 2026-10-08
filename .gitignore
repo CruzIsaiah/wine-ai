@@ -15,10 +15,13 @@ docs/PROJECT_GUIDE.md
 docs/PRESENTATION_GUIDE.md
 
 # --- Data Files ---
-data/
+data/*
 *.csv
 *.xlsx
 *.json
+!data/coopers_hawk_wines_full_catalog.csv
+!data/wine_data.csv
+!vercel.json
 
 # --- ADK / Cache / Logs ---
 adk_logs/

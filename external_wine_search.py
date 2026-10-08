@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from typing import Any
 
@@ -38,7 +39,7 @@ Use this exact structure:
 If no reliable wine match exists, return {{"found": false}}. Do not include markdown or commentary.
 """
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         contents=prompt,
         config=types.GenerateContentConfig(
             tools=[types.Tool(google_search=types.GoogleSearch())],

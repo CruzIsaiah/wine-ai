@@ -1,10 +1,9 @@
-const tabs = document.querySelectorAll(".tab");
-const panels = document.querySelectorAll(".finder-form");
 const resultsSection = document.querySelector("#results");
 const resultsGrid = document.querySelector("#results-grid");
 const status = document.querySelector("#status");
 let chatSessionId = null;
 let currentWines = [];
+let visibleWineTitles = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
 const chatWineResults = new Map();
 let detailsWine = null;
@@ -19,6 +18,7 @@ function getApiToken() {
 }
 
 getApiToken();
+document.querySelectorAll(".choice").forEach((choice) => choice.setAttribute("aria-pressed", String(choice.classList.contains("selected"))));
 
 function updateHeaderAppearance() {
   document.querySelector(".site-header").classList.toggle("scrolled", window.scrollY > 24);
@@ -27,52 +27,14 @@ function updateHeaderAppearance() {
 window.addEventListener("scroll", updateHeaderAppearance, { passive: true });
 updateHeaderAppearance();
 
-const chatPanel = document.querySelector("#chat-panel");
-const siteHeader = document.querySelector(".site-header");
-let chatIsActive = false;
-let headerHideTimer;
-
-function revealHeaderDuringChat() {
-  if (!chatIsActive) return;
-  siteHeader.classList.remove("interaction-hidden");
-  window.clearTimeout(headerHideTimer);
-  headerHideTimer = window.setTimeout(() => {
-    if (chatIsActive) siteHeader.classList.add("interaction-hidden");
-  }, 2200);
-}
-
-chatPanel.addEventListener("focusin", () => {
-  chatIsActive = true;
-  siteHeader.classList.add("interaction-hidden");
-});
-chatPanel.addEventListener("focusout", () => {
-  window.setTimeout(() => {
-    if (!chatPanel.contains(document.activeElement)) {
-      chatIsActive = false;
-      window.clearTimeout(headerHideTimer);
-      siteHeader.classList.remove("interaction-hidden");
-    }
-  }, 0);
-});
-window.addEventListener("pointermove", revealHeaderDuringChat, { passive: true });
-window.addEventListener("touchstart", revealHeaderDuringChat, { passive: true });
-
-tabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    tabs.forEach((item) => {
-      const active = item === tab;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-selected", String(active));
-    });
-    panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === tab.dataset.tab));
-  });
-});
-
 document.querySelectorAll("[data-choice]").forEach((group) => {
   group.addEventListener("click", (event) => {
     const choice = event.target.closest(".choice");
     if (!choice) return;
-    group.querySelectorAll(".choice").forEach((item) => item.classList.toggle("selected", item === choice));
+    group.querySelectorAll(".choice").forEach((item) => {
+      item.classList.toggle("selected", item === choice);
+      item.setAttribute("aria-pressed", String(item === choice));
+    });
     group.parentElement.querySelector(`input[name="${group.dataset.choice}"]`).value = choice.dataset.value;
   });
 });
@@ -122,6 +84,7 @@ function scoreLabel(score, bestScore) {
 
 function renderWines(wines, body) {
   currentWines = wines;
+  visibleWineTitles = wines.map((wine) => wine.Title);
   if (body.source === "grounded_search" && body.reference_wine) {
     const reference = body.reference_wine;
     status.innerHTML = `<p class="search-note"><strong>Found online:</strong> ${escapeHtml(reference.Title)} · ${escapeHtml(reference.Grape)} · ${escapeHtml(reference.Region || reference.Country)}. These catalog wines share its profile.</p>`;
@@ -152,9 +115,24 @@ function renderWines(wines, body) {
 
 function saveWineList() {
   localStorage.setItem("winepair_saved_wines", JSON.stringify(savedWines));
+  renderWineListState();
+}
+
+function renderWineListState() {
   document.querySelector("#wine-list-count").textContent = savedWines.length;
   document.querySelector("#saved-count").textContent = savedWines.length;
   renderSavedWines();
+  document.querySelectorAll(".chat-save-wine, .save-wine").forEach((button) => {
+    const wine = button.dataset.chatWineId
+      ? chatWineResults.get(button.dataset.chatWineId)
+      : currentWines[Number(button.dataset.wineIndex)];
+    if (!wine) return;
+    const saved = savedWines.some((entry) => entry.Title.toLowerCase() === wine.Title.toLowerCase());
+    button.classList.toggle("saved", saved);
+    button.textContent = button.classList.contains("chat-save-wine")
+      ? (saved ? "✓ Saved" : "+ Save")
+      : (saved ? "✓ Saved to my list" : "+ Add to my list");
+  });
 }
 
 function renderSavedWines() {
@@ -234,14 +212,30 @@ document.querySelector('#preferences-form select[name="currency"]').addEventList
   }
 });
 
-function addChatMessage(text, role, wines = []) {
+function addChatMessage(text, role, wines = [], preferences = null, receipt = {}) {
   const messages = document.querySelector("#chat-messages");
   const message = document.createElement("div");
   message.className = `chat-message ${role}`;
   message.innerHTML = role === "assistant"
     ? `<span class="chat-avatar">W</span><div class="chat-bubble">${renderMarkdown(text)}</div>`
     : `<div class="chat-bubble"><p>${escapeHtml(text)}</p></div>`;
+  if (role === "assistant") message.insertAdjacentHTML("beforeend", actionLinks(receipt));
+  if (role === "assistant" && preferences) {
+    const profile = document.createElement("div");
+    profile.className = "interpreted-preferences";
+    const currency = preferences.currency || "USD";
+    const price = (value) => new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+    const budget = preferences.max_price != null
+      ? `${preferences.min_price != null ? price(preferences.min_price) + "–" : "Up to "}${price(preferences.max_price)}`
+      : preferences.min_price != null ? `From ${price(preferences.min_price)}` : "";
+    const labels = [preferences.type, preferences.sweetness, preferences.body, preferences.flavor_notes, preferences.region, budget].filter((value) => value && value !== "any");
+    if (labels.length) {
+      profile.innerHTML = `<span class="profile-label">Matching your taste</span>${labels.map((label) => `<span class="profile-chip">${escapeHtml(label)}</span>`).join("")}`;
+      message.appendChild(profile);
+    }
+  }
   if (role === "assistant" && wines.length) {
+    visibleWineTitles = wines.map((wine) => wine.Title);
     const options = document.createElement("div");
     options.className = "chat-recommendation-cards";
     options.innerHTML = wines.map((wine, index) => {
@@ -254,7 +248,7 @@ function addChatMessage(text, role, wines = []) {
       const regionLine = region ? `<div class="chat-card-meta">${escapeHtml(region)}</div>` : "";
       const styleLine = wine.Style ? `<div class="chat-card-style">${escapeHtml(wine.Style)}</div>` : "";
       const priceLine = wine.Price ? `<div class="chat-card-price">${escapeHtml(wine.Price)}</div>` : `<div class="chat-card-price">Price varies</div>`;
-      const topPick = index === 0 ? '<span class="chat-card-top-pick">Top Pick</span>' : "";
+      const topPick = index === 0 ? '<span class="chat-card-top-pick">01 · Your closest match</span>' : `<span class="chat-card-rank">${String(index + 1).padStart(2, "0")} · Also worth a taste</span>`;
       return `
         <article class="chat-recommendation-card">
           ${topPick}
@@ -267,7 +261,7 @@ function addChatMessage(text, role, wines = []) {
           <div class="chat-card-footer">
             ${priceLine}
             <div class="chat-card-actions">
-              <button class="chat-ask-wine" data-chat-wine-id="${wineId}">Ask</button>
+              <button class="chat-ask-wine" data-chat-wine-id="${wineId}">Explore</button>
               <button class="chat-save-wine ${isSaved ? "saved" : ""}" data-chat-wine-id="${wineId}">${isSaved ? "✓ Saved" : "+ Save"}</button>
             </div>
           </div>
@@ -277,128 +271,121 @@ function addChatMessage(text, role, wines = []) {
     message.appendChild(options);
   }
   messages.appendChild(message);
-  messages.scrollTop = messages.scrollHeight;
+  if (role === "assistant") {
+    messages.scrollTop += message.getBoundingClientRect().top - messages.getBoundingClientRect().top - 16;
+  } else {
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
 
-function inferPreferencePayload(message) {
-  const lower = String(message || "").toLowerCase();
-  const payload = {
-    type: "",
-    sweetness: "",
-    body: "",
-    flavor_notes: "",
-    region: "",
-    currency: "USD",
-  };
+function actionLinks(receipt) {
+  const links = [];
+  if (receipt.listSaved) links.push('<button type="button" data-open-saved-list>View My List →</button>');
+  if (receipt.journalSaved) links.push('<a href="/journal">View journal →</a>');
+  return links.length ? `<div class="chat-action-links">${links.join("")}</div>` : "";
+}
 
-  const typeMatch = lower.match(/\b(red|white|rose|sparkling|dessert)\b/);
-  if (typeMatch) payload.type = typeMatch[1];
-
-  if (lower.includes("merlot")) payload.flavor_notes = "merlot";
-  if (lower.includes("cabernet")) payload.flavor_notes = "cabernet";
-  if (lower.includes("pinot noir")) payload.flavor_notes = "pinot noir";
-
-  if (/(sweet|dry|fruity|bold|light|smooth|oaky)/.test(lower)) {
-    if (lower.includes("sweet")) payload.sweetness = "sweet";
-    else if (lower.includes("dry")) payload.sweetness = "dry";
-    if (lower.includes("bold") || lower.includes("full")) payload.body = "bold";
-    else if (lower.includes("light")) payload.body = "light";
-    else if (lower.includes("smooth")) payload.body = "smooth";
-    else if (lower.includes("oaky")) payload.body = "oaky";
-  }
-
-  const budgetMatch = lower.match(/\$(\d{1,4})\s*(?:-|to|through|up to|and)\s*\$?(\d{1,4})/);
-  if (budgetMatch) {
-    payload.min_price = Number(budgetMatch[1]);
-    payload.max_price = Number(budgetMatch[2]);
-  } else {
-    const singleBudgetMatch = lower.match(/under\s*\$?(\d{1,4})|around\s*\$?(\d{1,4})|about\s*\$?(\d{1,4})|\$?(\d{1,4})\s*(?:budget|max|maximum|up to)/);
-    if (singleBudgetMatch) {
-      const budgetValue = Number(singleBudgetMatch[1] || singleBudgetMatch[2] || singleBudgetMatch[3] || singleBudgetMatch[4]);
-      if (!Number.isNaN(budgetValue)) payload.max_price = budgetValue;
+function applyChatActions(body) {
+  const messages = [];
+  const receipt = { listSaved: false, journalSaved: false };
+  if (body.list_additions?.length) {
+    try {
+      const result = WinePairPersonal.saveRecommendedWines(localStorage, body.list_additions);
+      savedWines = result.wines;
+      receipt.listSaved = true;
+      messages.push(result.added.length ? `Saved to My List: ${result.added.join("; ")}.` : "Those bottles are already in My List.");
+    } catch {
+      messages.push("I couldn’t save to My List in this browser. Please try the wine card’s Save button.");
     }
   }
-
-  const regionMatch = lower.match(/france|italy|spain|australia|usa|california|south africa|marlborough|loire|rhône/);
-  if (regionMatch) payload.region = regionMatch[0].replace(/^./, (character) => character.toUpperCase());
-
-  return payload;
+  if (body.journal_additions?.length) {
+    try {
+      const result = WinePairPersonal.saveJournalEntries(localStorage, body.journal_additions);
+      receipt.journalSaved = true;
+      messages.push(`Saved to your journal: ${result.saved.join("; ")}.`);
+      if (body.journal_additions.some((entry) => entry.rating == null)) messages.push("You can add a rating in your journal whenever you’re ready.");
+    } catch {
+      messages.push("I couldn’t save the journal entry in this browser. Please try again or open your Journal.");
+    }
+  }
+  if (receipt.listSaved) renderWineListState();
+  return { ...receipt, message: messages.join("\n\n") || body.message };
 }
 
-function formatWineReply(recommendations, message) {
-  if (!recommendations.length) {
-    return "I’m not seeing a perfect match right now, but I can help refine the style you want.";
-  }
-
-  const topWine = recommendations[0];
-  const lower = String(message || "").toLowerCase();
-  const hasBudget = /\$(\d{1,4})/.test(message) || /\bunder\b|\baround\b|\babout\b|\bbudget\b|\bup to\b/i.test(message);
-  const typeMatch = lower.match(/\b(red|white|rose|sparkling|dessert)\b/);
-  const occasionMatch = lower.match(/\b(special occasion|birthday|anniversary|dinner|gift|party|celebration)\b/);
-
-  let intro;
-  if (hasBudget) {
-    intro = `This is the closest match I found within your budget: ${topWine.Title || "this bottle"}.`;
-  } else if (typeMatch) {
-    intro = `For a ${typeMatch[1]} wine, I’d start with ${topWine.Title || "this bottle"}.`;
-  } else if (occasionMatch) {
-    intro = `For that occasion, I’d start with ${topWine.Title || "this bottle"}.`;
-  } else {
-    intro = `I’d start with ${topWine.Title || "this bottle"}.`;
-  }
-
-  return `${intro} Here are a few more I’d keep in mind:`;
-}
-
-async function fallbackChatReply(message) {
-  const payload = inferPreferencePayload(message);
-  const response = await fetch("/recommend/preferences", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-token": getApiToken(),
-    },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.detail || "The sommelier is unavailable.");
-  const recommendations = body.recommendations || [];
+function chatPayload(message, selectedWine = null) {
   return {
-    message: formatWineReply(recommendations, message),
-    recommendations,
+    message, session_id: chatSessionId,
+    journal_ratings: WinePairPersonal.readJournalRatings(localStorage),
+    visible_wine_titles: visibleWineTitles,
+    selected_wine_title: selectedWine?.Title || "",
+    local_date: WinePairPersonal.localDate(),
   };
 }
 
-async function sendChatMessage(message) {
+let chatPending = false;
+
+async function sendChatMessage(message, intent = "chat") {
   const trimmed = message.trim();
-  if (!trimmed) return;
+  if (!trimmed || chatPending || detailPending) return;
+  chatPending = true;
+  const input = document.querySelector("#chat-input");
+  input.value = "";
+  document.querySelector("#chat-panel").classList.add("has-conversation");
+  document.querySelectorAll("#chat-form button, .chat-suggestions button").forEach((button) => { button.disabled = true; });
   addChatMessage(trimmed, "user");
   const messages = document.querySelector("#chat-messages");
   const typing = document.createElement("div");
   typing.className = "chat-typing";
-  typing.textContent = "Searching the cellar…";
+  typing.setAttribute("role", "status");
+  typing.textContent = "Your sommelier is thinking…";
   messages.appendChild(typing);
   messages.scrollTop = messages.scrollHeight;
   try {
-    const fallback = await fallbackChatReply(trimmed);
+    let journalRatings;
+    try {
+      journalRatings = WinePairPersonal.readJournalRatings(localStorage);
+    } catch {
+      throw new Error("I couldn’t read your journal in this browser. Open your Journal to check it, or tell me a bottle you love.");
+    }
+    if (intent === "journal" && !journalRatings.some((entry) => entry.rating >= 4)) {
+      typing.remove();
+      addChatMessage(journalRatings.length
+        ? "You haven’t rated any wines 4 or 5 stars yet. Rate a bottle you enjoyed in your Journal, or tell me the name of a wine you love."
+        : "You don’t have any rated wines in your journal yet. Rate a bottle in your Journal, or tell me the name of a wine you love.", "assistant");
+      return;
+    }
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-token": getApiToken() },
+      body: JSON.stringify(chatPayload(trimmed)),
+      signal: AbortSignal.timeout(65000),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 429) throw new Error("The cellar is busy. Please wait a moment and try again.");
+      throw new Error(typeof body.detail === "string" ? body.detail : "Your sommelier couldn’t connect. Try again or set your preferences below.");
+    }
+    chatSessionId = body.session_id;
     typing.remove();
-    addChatMessage(fallback.message, "assistant", fallback.recommendations || []);
+    const receipt = applyChatActions(body);
+    addChatMessage(receipt.message, "assistant", body.recommendations || [], body.preferences, receipt);
   } catch (error) {
     typing.remove();
-    addChatMessage(error.message || "The sommelier is unavailable.", "assistant");
+    addChatMessage(error.name === "TimeoutError" ? "That took a little too long. Try again or set your preferences below." : error.message || "Your sommelier couldn’t connect. Please try again.", "assistant");
+    if (!input.value) input.value = trimmed;
+  } finally {
+    chatPending = false;
+    document.querySelectorAll("#chat-form button, .chat-suggestions button").forEach((button) => { button.disabled = false; });
   }
 }
 
 document.querySelector("#chat-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  const input = document.querySelector("#chat-input");
-  const message = input.value;
-  input.value = "";
-  sendChatMessage(message);
+  sendChatMessage(document.querySelector("#chat-input").value);
 });
 
 document.querySelectorAll(".chat-suggestions button").forEach((button) => {
-  button.addEventListener("click", () => sendChatMessage(button.textContent));
+  button.addEventListener("click", () => sendChatMessage(button.dataset.message, button.dataset.intent));
 });
 
 document.querySelector("#chat-messages").addEventListener("click", (event) => {
@@ -421,7 +408,8 @@ document.querySelector("#chat-messages").addEventListener("click", (event) => {
 });
 
 document.querySelector("#start-over").addEventListener("click", () => {
-  document.querySelector("#finder").scrollIntoView({ behavior: "smooth" });
+  document.querySelector("#manual-preferences").open = true;
+  document.querySelector("#manual-preferences").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.querySelector("#results-grid").addEventListener("click", (event) => {
@@ -477,17 +465,22 @@ function closeWineDetails() {
   document.querySelector("#wine-detail-backdrop").hidden = true;
 }
 
-function addDetailMessage(text, role="assistant") {
+function addDetailMessage(text, role="assistant", receipt={}) {
   const conversation = document.querySelector("#detail-conversation");
   const message = document.createElement("div");
   message.className = `detail-message ${role}`;
   message.innerHTML = `<div class="detail-bubble">${role === "assistant" ? renderMarkdown(text) : `<p>${escapeHtml(text)}</p>`}</div>`;
+  message.insertAdjacentHTML("beforeend", actionLinks(receipt));
   conversation.appendChild(message);
   conversation.scrollTop = conversation.scrollHeight;
 }
 
+let detailPending = false;
 async function askWineQuestion(question) {
-  if (!detailsWine || !question.trim()) return;
+  if (!detailsWine || !question.trim() || detailPending || chatPending) return;
+  detailPending = true;
+  const selectedWine = detailsWine;
+  document.querySelectorAll("#wine-detail-form button, .detail-suggestions button").forEach((button) => { button.disabled = true; });
   addDetailMessage(question.trim(), "user");
   const conversation = document.querySelector("#detail-conversation");
   const thinking = document.createElement("div");
@@ -495,21 +488,27 @@ async function askWineQuestion(question) {
   thinking.textContent = "Sommelier is thinking…";
   conversation.appendChild(thinking);
   try {
-    const response = await fetch("/wine-details", {
+    const response = await fetch("/chat", {
       method:"POST",
       headers:{
         "Content-Type":"application/json",
         "x-api-token": getApiToken(),
       },
-      body:JSON.stringify({wine:detailsWine,question:question.trim()}),
+      body:JSON.stringify(chatPayload(question.trim(), selectedWine)),
+      signal: AbortSignal.timeout(65000),
     });
     const body = await response.json().catch(() => ({}));
     thinking.remove();
     if (!response.ok) throw new Error(body.detail || "I couldn't answer that right now.");
-    addDetailMessage(body.answer);
+    chatSessionId = body.session_id;
+    const receipt = applyChatActions(body);
+    addDetailMessage(receipt.message, "assistant", receipt);
   } catch (error) {
     thinking.remove();
     addDetailMessage(error.message);
+  } finally {
+    detailPending = false;
+    document.querySelectorAll("#wine-detail-form button, .detail-suggestions button").forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -524,4 +523,19 @@ document.querySelectorAll(".detail-suggestions button").forEach((button) => butt
 document.querySelector("#close-wine-details").addEventListener("click", closeWineDetails);
 document.querySelector("#wine-detail-backdrop").addEventListener("click", closeWineDetails);
 
-saveWineList();
+renderWineListState();
+window.addEventListener("storage", (event) => {
+  if (event.key === "winepair_saved_wines") {
+    try {
+      const latest = JSON.parse(event.newValue || "[]");
+      if (Array.isArray(latest)) { savedWines = latest; renderWineListState(); }
+    } catch { /* Keep the last valid visible list. */ }
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-open-saved-list]")) {
+    closeWineDetails();
+    openWineList();
+  }
+});

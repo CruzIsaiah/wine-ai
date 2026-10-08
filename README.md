@@ -10,6 +10,18 @@ WinePair AI is a personalized wine discovery and tasting-journal application pow
 
 ## Current Experience
 
+### Sommelier-first Discovery
+
+- The sommelier conversation is the main discovery experience, with prompts for taste, food, occasions, and budget
+- A secondary **Set preferences** disclosure offers direct catalog recommendations
+- Starter prompts do not impose budgets; price limits come from the user’s stated preferences
+- AI translates requests into validated preferences; the existing recommendation engine selects and ranks every wine card
+- Interpreted taste and budget chips make each search easy to understand and refine
+- **Like a bottle I love** uses journal ratings (4–5 stars as positive preferences), with helpful empty-journal and unmatched-favorite fallbacks
+- Main chat and the wine **Explore** panel can save bottles to **My List** and record journal entries; the browser confirms only after local storage succeeds
+- Journal entries can start unrated, with ratings and notes added later; unrated entries do not affect average ratings or recommendations
+- Only wine names and ratings are sent for journal matching; tasting notes and dates stay in the browser
+
 ### Personalized Recommendations
 
 - Guided discovery by wine type, sweetness, body, flavor notes, region, and budget
@@ -55,7 +67,7 @@ WinePair AI is a personalized wine discovery and tasting-journal application pow
 - Configurable per-client API rate limiting
 - Controlled CORS configuration
 - JSON-safe recommendation responses
-- 25 automated tests covering recommendation behavior, pricing, APIs, chat, and tool handoffs
+- Automated tests covering recommendation behavior, pricing, APIs, chat, and tool handoffs
 
 ## Architecture
 
@@ -63,10 +75,13 @@ WinePair AI is a personalized wine discovery and tasting-journal application pow
 Website / ADK Web
        │
        ▼
-Google ADK Manager + Gemini
+Gemini + Google ADK (intent and explanation)
        │
        ▼
-FastAPI Recommendation API
+Validated preferences / reference wine
+       │
+       ▼
+Catalog recommendation engine (shared with manual form)
        │
        ├── Weighted TF-IDF + cosine similarity
        ├── Type, region, price, and product filters
@@ -80,7 +95,7 @@ The language model interprets user intent and presents results conversationally.
 | Component | Technology |
 |---|---|
 | Agent orchestration | Google ADK |
-| Language model | Gemini 3.6 Flash |
+| Language model | Gemini Flash (configurable via `GEMINI_MODEL`) |
 | Backend API | FastAPI + Uvicorn |
 | Recommendation engine | pandas, NumPy, scikit-learn |
 | Search fallback | Grounded Google Search |
@@ -110,7 +125,10 @@ Create a `.env` file in the project root:
 ```env
 GOOGLE_API_KEY=your_api_key_here
 API_RATE_LIMIT_PER_MINUTE=60
+GEMINI_MODEL=gemini-3.8-flash
 ```
+
+The website defaults to [Gemini 3.8 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash). Chat, bottle details, and external reference lookup use `GEMINI_MODEL`. If the AI service is unavailable, the manual preferences form still works. Chat sessions are held in process memory and reset on server restart or when requests reach a different worker.
 
 ### 4. Start the application
 
@@ -145,7 +163,8 @@ Open `http://127.0.0.1:8001` and select the `manager` app to inspect agent event
 ## Testing
 
 ```bash
-python -m pytest -q
+python -m pytest -q -o cache_dir=.pytest_cache
+node --test tests/test_personalization.cjs tests/test_chat_client.cjs
 ```
 
 ## Future Outlook
