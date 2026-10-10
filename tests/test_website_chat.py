@@ -288,3 +288,77 @@ def test_explore_context_and_both_actions_survive_lost_session(monkeypatch):
     assert body["journal_additions"][0]["date_tried"] == "2026-10-07"
     assert body["journal_additions"][0]["notes"] == "Lovely citrus"
     assert body["session_id"] != "expired-session"
+
+
+FALSE_CATALOG_CLAIM = "Our catalog exclusively features Cooper's Hawk wines, so I cannot exclude them."
+
+
+def test_false_catalog_claim_retries_with_real_engine_and_retains_preferences(monkeypatch):
+    context = SimpleNamespace(state={})
+    asyncio.run(main.recommend_wines({"type": "white", "sweetness": "off-dry"}, context))
+    calls = []
+
+    async def runner(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            yield final_event(FALSE_CATALOG_CLAIM)
+        else:
+            assert "not from coopers hawk" in kwargs["new_message"].parts[0].text
+            result = await main.recommend_wines({"excluded_producers": ["coopers hawk"]}, context)
+            yield tool_event(result)
+            yield final_event("Here are wines from other producers.")
+
+    monkeypatch.setattr(main, "has_gemini_key", lambda: True)
+    monkeypatch.setattr(main.chat_runner, "run_async", runner)
+    response = client.post("/chat", json={"message": "not from coopers hawk"})
+    body = response.json()
+    assert response.status_code == 200
+    assert len(calls) == 2
+    assert calls[0]["session_id"] == calls[1]["session_id"]
+    assert len(body["recommendations"]) == 5
+    assert all("cooper" not in w["Title"].lower() for w in body["recommendations"])
+    assert body["preferences"]["sweetness"] == "off-dry"
+    assert body["preferences"]["max_price"] is None
+
+
+def test_repeated_false_claim_is_replaced_without_infinite_retry(monkeypatch):
+    calls = []
+
+    async def runner(**kwargs):
+        calls.append(kwargs)
+        yield final_event(FALSE_CATALOG_CLAIM)
+
+    monkeypatch.setattr(main.chat_runner, "run_async", runner)
+    message, wines, *_ = asyncio.run(main.run_chat_agent(
+        "test", types.Content(role="user", parts=[types.Part(text="not from coopers hawk")])
+    ))
+    assert len(calls) == 2
+    assert "couldn't complete" in message
+    assert not wines
+    assert not main.false_coopers_only_claim(message)
+
+
+def test_false_explanation_preserves_successful_results_without_repeating_tools(monkeypatch):
+    expected = main.recommender.recommend_by_preferences({"excluded_producers": ["coopers hawk"]})
+    calls = []
+
+    async def runner(**kwargs):
+        calls.append(kwargs)
+        yield tool_event({"recommendations": expected, "preferences": {"excluded_producers": ["coopers hawk"]}})
+        yield final_event(FALSE_CATALOG_CLAIM)
+
+    monkeypatch.setattr(main.chat_runner, "run_async", runner)
+    result = asyncio.run(main.run_chat_agent("test", types.Content(role="user", parts=[types.Part(text="not from coopers hawk")])))
+    assert len(calls) == 1
+    assert result[1] == expected
+    assert not main.false_coopers_only_claim(result[0])
+
+
+@pytest.mark.parametrize("text", [
+    "The catalog is not exclusively Cooper's Hawk.",
+    "Our catalog doesn't only feature Cooper's Hawk wines.",
+    "Only Cooper's Hawk bottles match those filters.",
+    "Here are wines from other producers.",
+])
+def test_correct_statements_do_not_trigger_catalog_retry(text):
+    assert not main.false_coopers_only_claim(text)

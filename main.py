@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import uuid
 from typing import Any
 from datetime import date
@@ -366,13 +367,46 @@ async def recommend_wines(
     return {"recommendations": wines, "preferences": applied, "source": "catalog"}
 
 
+def catalog_context() -> str:
+    """Ground coverage claims in the loaded data, rather than conversation history."""
+    eligible = recommender.wine_df[
+        recommender.wine_df["recommendation_enabled"] & ~recommender.wine_df["is_case_product"]
+    ]
+    examples = eligible["Title"].head(6).tolist()
+    return (
+        f"Current loaded catalog: {len(recommender.wine_df)} wines, "
+        f"{len(eligible)} eligible for recommendation. "
+        f"Example eligible titles: {examples!r}. "
+        "Previous assistant statements about catalog coverage are not evidence. "
+        "Use recommend_wines to check producer exclusions; never refuse them based on earlier prose. "
+    )
+
+
+def false_coopers_only_claim(text: str) -> bool:
+    """Reject a known false coverage claim only when other eligible wines exist."""
+    eligible = recommender.wine_df[
+        recommender.wine_df["recommendation_enabled"] & ~recommender.wine_df["is_case_product"]
+    ]
+    normalized_titles = eligible["Title"].str.casefold().str.replace(r"[^\w]", "", regex=True)
+    if not (~normalized_titles.str.contains("coopershawk", regex=False)).any():
+        return False
+    for sentence in re.split(r"[.!?\n]", text.casefold()):
+        normalized = re.sub(r"[^\w]", "", sentence)
+        if ("coopershawk" in normalized
+                and re.search(r"\b(catalog|collection)\b", sentence)
+                and re.search(r"\b(only|exclusively|exclusive)\b", sentence)
+                and not re.search(r"\b(not|isn't|isn’t|doesn't|doesn’t)\b", sentence)):
+            return True
+    return False
+
+
 chat_session_service = InMemorySessionService()
 website_chat_agent = Agent(
     name="website_sommelier",
     model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
     description="Translates the guest's words into preferences for the WinePair recommendation engine.",
     instruction=(
-        "You are WinePair's friendly sommelier and translator. You understand taste and explain "
+        catalog_context() + "You are WinePair's friendly sommelier and translator. You understand taste and explain "
         "results; ONLY the recommendation engine selects and ranks bottles. For every new or refined "
         "recommendation request, call recommend_wines before answering, except journal-based searches "
         "which MUST call recommend_from_journal instead. Never suggest bottles from "
@@ -444,7 +478,7 @@ def has_gemini_key() -> bool:
     return bool(os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
 
 
-async def run_chat_agent(
+async def _run_chat_agent_turn(
     session_id: str, new_message: types.Content, journal_ratings: list[dict] | None = None,
     page_context: dict | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict | None, list[dict[str, Any]], list[dict[str, Any]]]:
@@ -492,6 +526,51 @@ async def run_chat_agent(
         else:
             final_text = "What kind of wine do you enjoy, and what budget do you have in mind?"
     return final_text, recommendations, preferences, list_additions, journal_additions
+
+
+async def run_chat_agent(
+    session_id: str, new_message: types.Content, journal_ratings: list[dict] | None = None,
+    page_context: dict | None = None,
+) -> tuple[str, list[dict[str, Any]], dict | None, list[dict[str, Any]], list[dict[str, Any]]]:
+    deadline = asyncio.get_running_loop().time() + 55
+    result = await _run_chat_agent_turn(session_id, new_message, journal_ratings, page_context)
+    if not false_coopers_only_claim(result[0]):
+        return result
+
+    # Do not repeat successful tools or save actions merely to repair the explanation.
+    if result[2] is None and not result[1] and not result[3] and not result[4]:
+        original = "\n".join(part.text for part in new_message.parts if part.text)
+        correction = types.Content(role="user", parts=[types.Part(text=(
+            "Retry the original request using the current catalog. " + catalog_context()
+            + "The previous Cooper's-Hawk-only claim was incorrect. "
+            "Call recommend_wines with the requested producer exclusion and retain prior taste "
+            "preferences. Do not invent a budget. Original request: " + original
+        ))])
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining > 0:
+            try:
+                result = await asyncio.wait_for(
+                    _run_chat_agent_turn(session_id, correction, journal_ratings, page_context),
+                    timeout=remaining,
+                )
+            except Exception:
+                pass
+        if not false_coopers_only_claim(result[0]):
+            return result
+
+    _, wines, preferences, list_actions, journal_actions = result
+    if wines:
+        message = "Here are the catalog matches returned by the recommendation engine."
+    elif preferences is not None:
+        message = "No bottles match all of those preferences. You can adjust your filters and try again."
+    elif list_actions or journal_actions:
+        message = "Your selected bottles are ready to save."
+    else:
+        message = (
+            "The catalog includes wines beyond Cooper's Hawk, and producer exclusions are supported. "
+            "I couldn't complete that search. Please try again or use Set preferences below."
+        )
+    return message, wines, preferences, list_actions, journal_actions
 
 
 @app.get("/")
