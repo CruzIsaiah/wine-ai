@@ -2,6 +2,7 @@ const resultsSection = document.querySelector("#results");
 const resultsGrid = document.querySelector("#results-grid");
 const status = document.querySelector("#status");
 let chatSessionId = null;
+let lastConfirmedPreferences = null;
 let currentWines = [];
 let visibleWineTitles = [];
 let savedWines = JSON.parse(localStorage.getItem("winepair_saved_wines") || "[]");
@@ -315,6 +316,7 @@ function applyChatActions(body) {
 function chatPayload(message, selectedWine = null) {
   return {
     message, session_id: chatSessionId,
+    previous_preferences: lastConfirmedPreferences,
     journal_ratings: WinePairPersonal.readJournalRatings(localStorage),
     visible_wine_titles: visibleWineTitles,
     selected_wine_title: selectedWine?.Title || "",
@@ -366,6 +368,8 @@ async function sendChatMessage(message, intent = "chat") {
       throw new Error(typeof body.detail === "string" ? body.detail : "Your sommelier couldn’t connect. Try again or set your preferences below.");
     }
     chatSessionId = body.session_id;
+    if (body.preferences) lastConfirmedPreferences = body.preferences;
+    else if (body.recommendations?.length) lastConfirmedPreferences = null;
     typing.remove();
     const receipt = applyChatActions(body);
     addChatMessage(receipt.message, "assistant", body.recommendations || [], body.preferences, receipt);
@@ -501,6 +505,8 @@ async function askWineQuestion(question) {
     thinking.remove();
     if (!response.ok) throw new Error(body.detail || "I couldn't answer that right now.");
     chatSessionId = body.session_id;
+    if (body.preferences) lastConfirmedPreferences = body.preferences;
+    else if (body.recommendations?.length) lastConfirmedPreferences = null;
     const receipt = applyChatActions(body);
     addDetailMessage(receipt.message, "assistant", receipt);
   } catch (error) {

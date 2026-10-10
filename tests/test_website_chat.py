@@ -362,3 +362,33 @@ def test_false_explanation_preserves_successful_results_without_repeating_tools(
 ])
 def test_correct_statements_do_not_trigger_catalog_retry(text):
     assert not main.false_coopers_only_claim(text)
+
+
+def test_lost_session_restores_confirmed_preferences_before_producer_refinement(monkeypatch):
+    async def runner(**kwargs):
+        state = kwargs["state_delta"]
+        assert state["wine_preferences"]["sweetness"] == "off-dry"
+        assert "Previous confirmed search preferences" in kwargs["new_message"].parts[0].text
+        result = await main.recommend_wines(
+            {"excluded_producers": ["coopers hawk"]}, SimpleNamespace(state=state)
+        )
+        yield tool_event(result)
+        yield final_event("Here are your updated matches.")
+
+    monkeypatch.setattr(main, "has_gemini_key", lambda: True)
+    monkeypatch.setattr(main.chat_runner, "run_async", runner)
+    body = client.post("/chat", json={
+        "message": "not from coopers hawk", "session_id": "lost-session",
+        "previous_preferences": {"type": "white", "sweetness": "off-dry", "max_price": 20},
+    }).json()
+    assert body["preferences"]["max_price"] == 20
+    assert body["preferences"]["sweetness"] == "off-dry"
+    assert body["recommendations"]
+    assert all(w["Type"] == "White" and "cooper" not in w["Title"].lower() for w in body["recommendations"])
+
+
+def test_restored_preferences_are_validated():
+    response = client.post("/chat", json={
+        "message": "not from coopers hawk", "previous_preferences": {"max_price": -1},
+    })
+    assert response.status_code == 422

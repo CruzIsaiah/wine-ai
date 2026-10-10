@@ -113,6 +113,7 @@ class JournalEntryAction(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     session_id: str | None = Field(default=None, max_length=100)
+    previous_preferences: WinePreferences | None = None
     journal_ratings: list[JournalRating] = Field(default_factory=list, max_length=100)
     visible_wine_titles: list[str] = Field(default_factory=list, max_length=100)
     selected_wine_title: str = Field(default="", max_length=200)
@@ -597,6 +598,8 @@ async def chat(request: ChatRequest):
         session = await chat_session_service.get_session(
             app_name="winepair_web", user_id="website_user", session_id=request.session_id
         )
+    restored_preferences = (request.previous_preferences.model_dump()
+                            if session is None and request.previous_preferences else None)
     if session is None:
         session = await chat_session_service.create_session(
             app_name="winepair_web", user_id="website_user", session_id=str(uuid.uuid4())
@@ -611,6 +614,9 @@ async def chat(request: ChatRequest):
         known.setdefault(wine["Title"].casefold(), wine)
     context["recommended_wines"] = dict(list(known.items())[-100:])
     message = request.message
+    if restored_preferences is not None:
+        context["wine_preferences"] = restored_preferences
+        message += "\n[Previous confirmed search preferences: " + str(restored_preferences) + "]"
     if visible:
         message += "\n[Page context: visible recommendations in order: " + "; ".join(w["Title"] for w in visible) + "]"
     if selected:

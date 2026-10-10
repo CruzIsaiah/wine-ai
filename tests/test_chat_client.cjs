@@ -77,3 +77,15 @@ test('failed persistence in Explore shows errors rather than AI success text', a
   assert.match(html, /couldn’t save/);
   assert.doesNotMatch(html, /I saved both!/);
 });
+
+test('follow-up requests carry confirmed preferences through chat and Explore', async () => {
+  const preferences = { type: 'white', sweetness: 'off-dry', max_price: null, excluded_producers: [] };
+  const app = client({ ...reply, preferences });
+  await vm.runInContext('sendChatMessage("An off-dry white")', app.context);
+  await vm.runInContext('sendChatMessage("not from coopers hawk")', app.context);
+  assert.equal(app.requests[0].body.previous_preferences, null);
+  assert.deepEqual(app.requests[1].body.previous_preferences, preferences);
+  vm.runInContext(`detailsWine = ${JSON.stringify(wine)}`, app.context);
+  await vm.runInContext('askWineQuestion("Try another producer")', app.context);
+  assert.deepEqual(app.requests[2].body.previous_preferences, preferences);
+});
